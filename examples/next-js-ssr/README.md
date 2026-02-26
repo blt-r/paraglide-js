@@ -92,6 +92,7 @@ NextJS does not support AsyncLocalStorage. Hence, we need to use a workaround to
 +	getTextDirection,
 +	Locale,
 +	overwriteGetLocale,
++	overwriteGetUrlOrigin,
 +} from "../paraglide/runtime";
 import React, { cache } from "react";
 import { headers } from "next/headers";

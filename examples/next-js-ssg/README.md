@@ -85,6 +85,14 @@ app/
 ```
 
 ```diff
++import { cache } from "react";
++import {
++	assertIsLocale,
++	baseLocale,
++	getLocale,
++	getTextDirection,
++	overwriteGetLocale,
++} from "../paraglide/runtime.js";
 
 // needed for SSG
 +export function generateStaticParams() {
