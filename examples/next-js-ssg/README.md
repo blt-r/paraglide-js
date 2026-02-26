@@ -109,13 +109,13 @@ export default async function RootLayout({
 	// can't use async params because the execution order get's screwed up.
 	// this is something nextjs has to fix
 +	ssrLocale().locale = params.locale;
-	return (
-		<html lang={getLocale()}>
-			<body>
-				{children}
-			</body>
-		</html>
-	);
+		return (
+			<html lang={getLocale()} dir={getTextDirection()}>
+				<body>
+					{children}
+				</body>
+			</html>
+		);
 }
 ```
 
