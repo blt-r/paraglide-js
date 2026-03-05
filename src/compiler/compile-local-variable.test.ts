@@ -90,3 +90,35 @@ test("compiles a local variable with an annotation and options", () => {
 		'const myVar = registry.myFunction("en", "Hello", { option1: "value1", option2: i?.varRef });'
 	);
 });
+
+test("compiles number formatter fraction digit options as numeric literals", () => {
+	const code = compileLocalVariable({
+		locale: "en",
+		declaration: {
+			type: "local-variable",
+			name: "formattedValue",
+			value: {
+				type: "expression",
+				arg: { type: "variable-reference", name: "value" },
+				annotation: {
+					type: "function-reference",
+					name: "number",
+					options: [
+						{
+							name: "minimumFractionDigits",
+							value: { type: "literal", value: "1" },
+						},
+						{
+							name: "maximumFractionDigits",
+							value: { type: "literal", value: "1" },
+						},
+					],
+				},
+			},
+		},
+	});
+
+	expect(code).toEqual(
+		'const formattedValue = registry.number("en", i?.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 });'
+	);
+});
