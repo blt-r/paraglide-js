@@ -88,8 +88,7 @@ const booleanOptionNamesByAnnotation: Record<string, ReadonlySet<string>> = {
 	datetime: new Set(["hour12"]),
 };
 
-const jsNumberLiteralPattern =
-	/^[+-]?(?:(?:0|[1-9]\d*)(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+const jsNonNegativeIntegerPattern = /^(?:0|[1-9]\d*)$/;
 
 function compileOptionLiteralOrVarRef(
 	annotationName: string,
@@ -118,7 +117,7 @@ function shouldEmitNumberLiteral(
 ): boolean {
 	return (
 		numericOptionNamesByAnnotation[annotationName]?.has(optionName) === true &&
-		jsNumberLiteralPattern.test(literal)
+		jsNonNegativeIntegerPattern.test(literal)
 	);
 }
 
