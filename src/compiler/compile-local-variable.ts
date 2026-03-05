@@ -5,6 +5,7 @@ import type {
 	VariableReference,
 } from "@inlang/sdk";
 import { compileInputAccess } from "./variable-access.js";
+import { escapeForDoubleQuoteString } from "../services/codegen/escape.js";
 
 /**
  * Compiles a local variable.
@@ -107,7 +108,7 @@ function compileOptionLiteralOrVarRef(
 		return value.value;
 	}
 
-	return `"${value.value}"`;
+	return `"${escapeForDoubleQuoteString(value.value)}"`;
 }
 
 function shouldEmitNumberLiteral(
@@ -135,7 +136,7 @@ function shouldEmitBooleanLiteral(
 function compileLiteralOrVarRef(value: Literal | VariableReference): string {
 	switch (value.type) {
 		case "literal":
-			return `"${value.value}"`;
+			return `"${escapeForDoubleQuoteString(value.value)}"`;
 		case "variable-reference":
 			return compileInputAccess(value.name);
 	}
