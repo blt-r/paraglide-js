@@ -102,7 +102,7 @@
  *
  * @template Inputs
  * @template Options
- * @template {MessageMarkupSchema} Markup
+ * @template {MessageMarkupSchema} [Markup = MessageMarkupSchema]
  * @typedef {{
  *   readonly __paraglide?: {
  *     inputs: Inputs;
