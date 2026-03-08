@@ -1,7 +1,7 @@
 import { locales } from "./variables.js";
 /** @import {Locale} from "./type-definitions.js" */
 
-// Because of a bug in tsc does not recognize that {locale is Locale} gurard
+// Because of a bug in tsc does not recognize that {locale is Locale} guard
 // uses this type and complains that `Locale` type is unused.
 // So we have to use it here.
 // This is fixed in tsgo (typescript 7.0)
