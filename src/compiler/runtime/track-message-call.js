@@ -1,4 +1,5 @@
 import { serverAsyncLocalStorage, isServer } from "./variables.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * @param {string} safeModuleId

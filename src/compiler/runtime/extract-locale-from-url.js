@@ -5,6 +5,7 @@ import {
 	TREE_SHAKE_DEFAULT_URL_PATTERN_USED,
 	urlPatterns,
 } from "./variables.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * If extractLocaleFromUrl is called many times on the same page and the URL
@@ -65,8 +66,8 @@ export function extractLocaleFromUrl(url) {
 /**
  * https://github.com/opral/inlang-paraglide-js/issues/381
  *
- * @param {URL|string} url - The full URL from which to extract the locale.
- * @returns {Locale|undefined} The extracted locale, or undefined if no locale is found.
+ * @param {URL | string} url - The full URL from which to extract the locale.
+ * @returns {Locale | undefined} The extracted locale, or undefined if no locale is found.
  */
 function defaultUrlPatternExtractLocale(url) {
 	const urlObj = new URL(url, "http://dummy.com");

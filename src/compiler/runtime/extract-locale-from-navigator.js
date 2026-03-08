@@ -1,4 +1,5 @@
 import { isLocale } from "./is-locale.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * Negotiates a preferred language from navigator.languages.
@@ -9,8 +10,7 @@ import { isLocale } from "./is-locale.js";
  * @example
  *   const locale = extractLocaleFromNavigator();
  *
- * @type {() => Locale | undefined}
- * @returns {string | undefined}
+ * @returns {Locale | undefined}
  */
 export function extractLocaleFromNavigator() {
 	if (!navigator?.languages?.length) {

@@ -1,5 +1,6 @@
 import { isLocale } from "./is-locale.js";
 import { cookieName } from "./variables.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * Extracts a cookie from the document.
@@ -7,7 +8,7 @@ import { cookieName } from "./variables.js";
  * Will return undefined if the document is not available or if the cookie is not set.
  * The `document` object is not available in server-side rendering, so this function should not be called in that context.
  *
- * @returns {string | undefined}
+ * @returns {Locale | undefined}
  */
 export function extractLocaleFromCookie() {
 	if (typeof document === "undefined" || !document.cookie) {

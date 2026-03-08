@@ -1,4 +1,5 @@
 import { isLocale } from "./is-locale.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * Extracts a locale from the accept-language header.
@@ -9,9 +10,8 @@ import { isLocale } from "./is-locale.js";
  * @example
  *   const locale = extractLocaleFromHeader(request);
  *
- * @type {(request: Request) => Locale}
  * @param {Request} request - The request object to extract the locale from.
- * @returns {string|undefined} The negotiated preferred language.
+ * @returns {Locale | undefined} The negotiated preferred language.
  */
 export function extractLocaleFromHeader(request) {
 	const acceptLanguageHeader = request.headers.get("accept-language");

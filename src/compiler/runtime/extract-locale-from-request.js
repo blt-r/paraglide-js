@@ -12,6 +12,7 @@ import {
 	TREE_SHAKE_PREFERRED_LANGUAGE_STRATEGY_USED,
 	TREE_SHAKE_URL_STRATEGY_USED,
 } from "./variables.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * Extracts a locale from a request.
@@ -29,7 +30,8 @@ import {
  * @example
  *   const locale = extractLocaleFromRequest(request);
  *
- * @type {(request: Request) => Locale}
+ * @param {Request} request
+ * @returns {Locale}
  */
 export const extractLocaleFromRequest = (request) => {
 	return extractLocaleFromRequestWithStrategies(

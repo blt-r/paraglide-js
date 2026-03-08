@@ -18,6 +18,7 @@ import {
 	TREE_SHAKE_PREFERRED_LANGUAGE_STRATEGY_USED,
 	TREE_SHAKE_URL_STRATEGY_USED,
 } from "./variables.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * This is a fallback to get started with a custom
@@ -26,7 +27,7 @@ import {
  * The implementation is overwritten
  * by \`overwriteGetLocale()\` and \`defineSetLocale()\`.
  *
- * @type {Locale|undefined}
+ * @type {Locale | undefined}
  */
 let _locale;
 
@@ -48,7 +49,7 @@ let localeInitiallySet = false;
  *     console.log('Netherlands 🇳🇱');
  *   }
  *
- * @type {() => Locale}
+ * @returns {Locale} The current locale.
  */
 export let getLocale = () => {
 	if (experimentalStaticLocale !== undefined) {
@@ -186,7 +187,7 @@ function resolveLocaleWithStrategies(strategyToUse, urlForUrlStrategy) {
  *     return Cookies.get('locale') ?? baseLocale
  *   });
  *
- * @type {(fn: () => Locale) => void}
+ * @param {() => Locale} fn - The new implementation for `getLocale()`.
  */
 export const overwriteGetLocale = (fn) => {
 	getLocale = fn;

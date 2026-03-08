@@ -1,9 +1,10 @@
 import { locales } from "./variables.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * Asserts that the input is a locale.
  *
- * @param {any} input - The input to check.
+ * @param {unknown} input - The input to check.
  * @returns {Locale} The input if it is a locale.
  * @throws {Error} If the input is not a locale.
  */

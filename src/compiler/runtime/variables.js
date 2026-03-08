@@ -1,3 +1,5 @@
+/** @import {Locale} from "./type-definitions.js" */
+
 /**
  * The project's base locale.
  *
@@ -16,7 +18,7 @@ export const baseLocale = "en";
  *     throw new Error('Locale is not available');
  *   }
  */
-export const locales = /** @type {const} */ (["en", "de"]);
+export const locales = /** @type {readonly string[]} */ (["en", "de"]);
 
 /** @type {string} */
 export const cookieName = "<cookie-name>";
@@ -51,7 +53,7 @@ export const routeStrategies = [];
 /**
  * The used URL patterns.
  *
- * @type {Array<{ pattern: string, localized: Array<[Locale, string]> }> }
+ * @type {Array<{ pattern: string, localized: Array<[Locale, string]> }>}
  */
 export const urlPatterns = [];
 

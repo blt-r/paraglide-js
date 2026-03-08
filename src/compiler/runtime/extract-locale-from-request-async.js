@@ -3,6 +3,7 @@ import { getStrategyForUrl } from "./variables.js";
 import { assertIsLocale } from "./assert-is-locale.js";
 import { isLocale } from "./is-locale.js";
 import { extractLocaleFromRequestWithStrategies } from "./extract-locale-from-request.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * Asynchronously extracts a locale from a request.
@@ -31,7 +32,8 @@ import { extractLocaleFromRequestWithStrategies } from "./extract-locale-from-re
  *
  *   const locale = await extractLocaleFromRequestAsync(request);
  *
- * @type {(request: Request) => Promise<Locale>}
+ * @param {Request} request - The request object to extract the locale from.
+ * @returns {Promise<Locale>} The extracted locale.
  */
 export const extractLocaleFromRequestAsync = async (request) => {
 	/** @type {string|undefined} */

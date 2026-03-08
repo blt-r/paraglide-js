@@ -14,12 +14,12 @@ import {
 	TREE_SHAKE_LOCAL_STORAGE_STRATEGY_USED,
 	TREE_SHAKE_URL_STRATEGY_USED,
 } from "./variables.js";
+/** @import {Locale} from "./type-definitions.js" */
 
 /**
  * Navigates to the localized URL, or reloads the current page
  *
  * @param {string} [newLocation] The new location
- * @return {undefined}
  */
 const navigateOrReload = (newLocation) => {
 	if (newLocation) {
@@ -70,7 +70,7 @@ export let setLocale = (newLocale, options) => {
 	} catch {
 		// do nothing, no locale has been set yet.
 	}
-	/** @type {Array<Promise<any>>} */
+	/** @type {Array<Promise<void>>} */
 	const customSetLocalePromises = [];
 	/** @type {string | undefined} */
 	let newLocation = undefined;
