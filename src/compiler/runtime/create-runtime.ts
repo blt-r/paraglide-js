@@ -69,7 +69,7 @@ ${injectCode("./variables.js")
 	)
 	.replace(
 		`export const locales = /** @type {readonly string[]} */ (["en", "de"]);`,
-		`export const locales = /** @type {const} */ (["${args.locales.join('", "')}"]);`
+		`export const locales = /** @type {const} */ (${JSON.stringify(args.locales)});`
 	)
 	.replace(
 		`export const strategy = ["globalVariable"];`,
