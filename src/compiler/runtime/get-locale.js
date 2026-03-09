@@ -24,7 +24,7 @@ import {
  * strategy and avoid type errors.
  *
  * The implementation is overwritten
- * by \`overwriteGetLocale()\` and \`defineSetLocale()\`.
+ * by `overwriteGetLocale()` and `defineSetLocale()`.
  *
  * @type {Locale | undefined}
  */
