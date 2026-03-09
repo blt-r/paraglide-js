@@ -1,5 +1,15 @@
 # @inlang/paraglide-js
 
+## 2.14.0
+
+### Minor Changes
+
+- 067509d: Improve generated runtime typing by centralizing shared type definitions, avoiding strict `checkJs` locale type errors, and moving middleware locale-splitting state under `globalThis.__paraglide.ssr`.
+
+### Patch Changes
+
+- a17af28: Remove stale telemetry internals that were no longer used by the CLI or compiler.
+
 ## 2.13.2
 
 ### Patch Changes
