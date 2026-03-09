@@ -11,7 +11,6 @@ export declare const ENV_VARIABLES: {
 	 * The inlang app id.
 	 */
 	PARJS_APP_ID: string;
-	PARJS_POSTHOG_TOKEN?: string;
 	/**
 	 * The Package version from package.json
 	 *
