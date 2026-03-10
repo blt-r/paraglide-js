@@ -29,6 +29,7 @@ export function extractLocaleFromUrl(url) {
 		return cachedLocale;
 	}
 
+	/** @type {Locale | undefined} */
 	let result;
 	if (TREE_SHAKE_DEFAULT_URL_PATTERN_USED) {
 		result = defaultUrlPatternExtractLocale(url);
@@ -42,12 +43,10 @@ export function extractLocaleFromUrl(url) {
 					urlObj.href
 				);
 
-				if (!match) {
-					continue;
+				if (match) {
+					result = locale;
+					break;
 				}
-
-				result = locale;
-				break;
 			}
 			if (result) break;
 		}
