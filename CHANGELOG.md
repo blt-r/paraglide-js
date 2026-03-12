@@ -1,5 +1,12 @@
 # @inlang/paraglide-js
 
+## 2.14.1
+
+### Patch Changes
+
+- 7d29058: Remove dead JSDoc `@import` stripping from the runtime generator.
+- 46ac447: Upgrade `@inlang/sdk` to v2.8.0.
+
 ## 2.14.0
 
 ### Minor Changes
