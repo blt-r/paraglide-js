@@ -134,6 +134,14 @@ const compileBundleFunction = (args: {
 
 	const isFullyTranslated =
 		args.availableLocales.length === args.settings?.locales.length;
+	const baseLocale = args.settings?.baseLocale;
+	const dispatchLocales =
+		baseLocale && args.availableLocales.includes(baseLocale)
+			? [
+					...args.availableLocales.filter((locale) => locale !== baseLocale),
+					baseLocale,
+				]
+			: args.availableLocales;
 
 	const inputType = args.inputTypeAliasName;
 	const localesUnion =
@@ -151,10 +159,10 @@ const compileBundleFunction = (args: {
 		mode: "string" | "parts",
 		continuationIndent: string
 	): string =>
-		args.availableLocales
+		dispatchLocales
 			.map((locale, index) => {
 				const condition =
-					!isFullyTranslated || index < args.availableLocales.length - 1
+					!isFullyTranslated || index < dispatchLocales.length - 1
 						? `if (locale === "${locale}") `
 						: "";
 				const prefix = index > 0 ? continuationIndent : "";

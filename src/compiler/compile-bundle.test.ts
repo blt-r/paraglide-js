@@ -65,6 +65,53 @@ test("compiles to jsdoc", async () => {
 	);
 });
 
+test("uses the base locale as the exhaustive locale branch", () => {
+	const mockBundle: BundleNested = {
+		id: "greeting",
+		declarations: [],
+		messages: [
+			{
+				id: "message-id",
+				bundleId: "greeting",
+				locale: "en",
+				selectors: [],
+				variants: [
+					{
+						id: "variant-id",
+						messageId: "message-id",
+						matches: [],
+						pattern: [{ type: "text", value: "Hello" }],
+					},
+				],
+			},
+		],
+	};
+
+	const result = compileBundle({
+		fallbackMap: {
+			fr: "en",
+			de: "en",
+			en: undefined,
+			ja: "en",
+		},
+		bundle: mockBundle,
+		messageReferenceExpression: (locale) => `${locale}_greeting`,
+		settings: {
+			baseLocale: "en",
+			locales: ["fr", "de", "en", "ja"],
+		} as ProjectSettings,
+	});
+
+	expect(result.bundle.code).toContain(
+		[
+			'if (locale === "fr") return fr_greeting(inputs)',
+			'if (locale === "de") return de_greeting(inputs)',
+			'if (locale === "ja") return ja_greeting(inputs)',
+			"return en_greeting(inputs)",
+		].join("\n\t")
+	);
+});
+
 test("emits middleware locale splitting hooks when enabled", () => {
 	const mockBundle: BundleNested = {
 		id: "blue_moon_bottle",
