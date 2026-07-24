@@ -1,12 +1,12 @@
 import { getLocale } from "./get-locale.js";
 import { clearLocaleCookieCache } from "./extract-locale-from-cookie.js";
 import { localizeUrl } from "./localize-url.js";
+import { getStrategyForUrl } from "./route-strategy.js";
 import { customClientStrategies, isCustomStrategy } from "./strategy.js";
 import {
 	cookieDomain,
 	cookieMaxAge,
 	cookieName,
-	getStrategyForUrl,
 	isServer,
 	localStorageKey,
 	experimentalStaticLocale,

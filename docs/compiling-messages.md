@@ -62,7 +62,10 @@ See [unplugin](https://unplugin.unjs.io/) for the full list of supported bundler
 ### Vite
 
 > [!TIP]
-> **Vite is the ideal bundler for Paraglide.** Vite's built-in tree-shaking (via Rollup) automatically eliminates unused messages, and HMR gives you instant feedback when editing translations. Setup is just one plugin—no extra configuration needed.
+> **Vite is the ideal bundler for Paraglide.** Vite's built-in tree-shaking
+> automatically eliminates unused messages, and HMR gives you instant feedback
+> when editing translations. Setup is just one plugin—no extra configuration
+> needed.
 
 ```ts
 import { defineConfig } from "vite";
@@ -81,10 +84,8 @@ export default defineConfig({
 
 #### Experimental per-locale builds
 
-On Vite 8.x, TanStack Start and SvelteKit can emit a separate client asset graph
-for every project locale. Paraglide detects the framework, reads the locale
-list automatically, and specializes the compiled message functions at build
-time, so each graph contains only one locale's translations.
+The Vite 8+ backend builds one independent Rolldown client environment per
+locale:
 
 ```ts
 paraglideVitePlugin({
@@ -94,47 +95,39 @@ paraglideVitePlugin({
 });
 ```
 
-TanStack Start must use the generated server entry:
+Paraglide generates one source module per locale before Vite starts bundling.
+Each environment then runs the normal Vite/Rolldown pipeline. Paraglide does
+not parse, rename, minify, or rewrite emitted chunks. Consequently,
+`build.minify: false`, source maps, CSS, dynamic imports, custom chunk names,
+and normal Vite asset handling stay under Vite's control. Source maps were
+explicitly tested to ensure they do not embed another locale's translations.
 
-```ts
-// src/server.ts
-export { default } from "./paraglide/tanstack-start.server.js";
-```
+Outputs are written to
+`<build.outDir>/__paraglide/<stable-locale-id>/`. The top-level
+`paraglide-vite-locales.json` records the Vite and Rolldown versions, each
+environment and directory, native entry chunks, file byte sizes, static
+imports, and dynamic imports. The build verifies that every recorded internal
+import is present in the same locale graph.
 
-SvelteKit keeps using its normal `paraglideMiddleware` server hook. Paraglide
-integrates with SvelteKit's renderer automatically, including SSR, prerendered
-HTML, preload headers, and client bootstrap imports.
+This backend deliberately owns Vite's `builder.buildApp` hook and fails if
+another orchestrator is installed. It therefore works for Vite applications
+whose client build Vite owns directly. It does not inspect a framework's
+server output or patch framework manifests. A framework integration requires
+a public API through which the framework asks for locale client variants and
+selects a returned graph during rendering.
 
-The base locale keeps the canonical asset URLs. TanStack Start locale trees
-are emitted under `/__paraglide/<locale-id>/`; SvelteKit locale trees stay
-inside its immutable cache directory at
-`/_app/immutable/__paraglide/<locale-id>/`.
-The emitted `paraglide-per-locale.json` indexes the locale prefixes and asset
-mappings.
+The generated Paraglide layout is `locale-modules`; explicitly selecting
+`message-modules` is rejected for this backend. Locale switching still
+requires full-document navigation. The server, deployment adapter, or static
+hosting layout is responsible for selecting the directory named by the
+manifest. For directly opening each emitted HTML tree, use a relative Vite
+`base` such as `"./"`.
 
-Locale switching must use full navigation (the default behavior of
-`setLocale()`), because a hydrated page cannot mix two specialized graphs. In
-SvelteKit, add `data-sveltekit-reload` to links which can change locale. If a
-client message call supplies a different `options.locale`, Paraglide warns and
-uses the locale already selected for that client graph.
-
-The experiment intentionally supports a narrow, fail-fast configuration:
-
-- Vite 8.x and a tested framework version: TanStack Start 1.168.x or SvelteKit
-  2.69.x.
-- A global locale strategy whose first entry is `url` or `cookie`, without
-  `routeStrategies`.
-- Root/default asset hosting. Do not configure Vite `base`, source maps,
-  `build.minify: false`, or `experimental.renderBuiltUrl`.
-- TanStack Start must use the generated server entry shown above.
-- SvelteKit must use the default `_app`, empty `kit.paths.base` and
-  `kit.paths.assets`, `bundleStrategy: "split"`, and client router resolution.
-  Service workers and SPA fallback pages are not supported; use SSR or
-  prerender every localized page.
-
-Paraglide rejects unsupported combinations during configuration or build. It
-performs the required final Oxc minification itself and does not emit client
-source maps.
+TanStack Start and SvelteKit currently own their Vite application build and
+server rendering. The backend fails instead of inspecting their output. They
+need public client-variant build and render-selection hooks before this option
+can compose with them. See the
+[per-locale build architecture](./per-locale-build-architecture.md).
 
 ### Webpack
 

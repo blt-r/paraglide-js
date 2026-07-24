@@ -8,9 +8,10 @@ export type ParaglideVitePluginOptions = CompilerOptions & {
 	/**
 	 * Emit one compiler-specialized client asset tree per project locale.
 	 *
-	 * Supports the documented default configurations of TanStack Start and
-	 * SvelteKit on Vite 8.x. Unsupported framework and asset configurations fail
-	 * during the build. Locale changes need to use full-document navigation.
+	 * Requires Vite 8+. Builds one untouched Rolldown client environment per
+	 * locale and emits `paraglide-vite-locales.json`. Locale changes need to use
+	 * full-document navigation. Framework SSR graph selection requires a public
+	 * framework integration API.
 	 *
 	 * @experimental
 	 * @default false

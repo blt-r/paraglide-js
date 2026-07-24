@@ -12,7 +12,7 @@ TanStack Router keeps owning your route tree, loaders, server functions, navigat
 This guide covers:
 
 - TanStack Router `rewrite` integration with `localizeUrl()` and `deLocalizeUrl()`
-- Generated request middleware and per-locale client asset selection
+- Request middleware and request-scoped locale selection
 - Locale-aware rendering in routes, loaders, and server functions
 - Type-safe translated pathnames from the generated TanStack route tree
 - Prerendering localized routes
@@ -50,8 +50,6 @@ export default defineConfig({
 +                      project: "./project.inlang",
 +                      outdir: "./src/paraglide",
 +     emitTsDeclarations: true,
-+                      experimentalPerLocaleBuild: true,
-+     outputStructure: "message-modules",
 +     cookieName: "PARAGLIDE_LOCALE",
 +     strategy: ["url", "cookie", "preferredLanguage", "baseLocale"],
 +      urlPatterns: [
@@ -67,20 +65,30 @@ export default defineConfig({
 });
 ```
 
-3. Re-export the generated TanStack Start server entry from `src/server.ts`:
+3. Wrap the TanStack Start handler with `paraglideMiddleware` in
+   `src/server.ts`:
 
 ```ts
-export { default } from "./paraglide/tanstack-start.server.js";
+import {
+  createStartHandler,
+  defaultStreamHandler,
+} from "@tanstack/react-start/server";
+import { paraglideMiddleware } from "./paraglide/server.js";
+
+const fetch = createStartHandler({ handler: defaultStreamHandler });
+
+export default {
+  fetch(request: Request) {
+    return paraglideMiddleware(request, ({ request: localizedRequest }) =>
+      fetch(localizedRequest),
+    );
+  },
+};
 ```
 
-The generated entry wraps TanStack Start with `paraglideMiddleware`, chooses the locale-specialized client assets before rendering, and preserves the page locale for server-function requests. TanStack Router still receives the original URL, so its `rewrite` configuration remains the only routing rewrite.
-
-This experimental path is deliberately fail-fast. It currently accepts Vite
-8.x with TanStack Start 1.168.x, root/default asset hosting, and a global
-strategy whose first entry is `url` or `cookie`. Do not configure
-`routeStrategies`, Vite `base`, source maps, `build.minify: false`, or
-`experimental.renderBuiltUrl`. Use the generated server entry rather than a
-custom `createStartHandler` or `transformAssets` pipeline.
+The middleware preserves the request locale while rendering. TanStack Router
+still receives the original URL, so its `rewrite` configuration remains the
+only routing rewrite.
 
 4. Done :)
 
@@ -118,9 +126,9 @@ const router = createRouter({
 });
 ```
 
-Locale changes must use the default full-page navigation behavior of
-`setLocale()`; disabling reload would keep the old locale's specialized client
-graph active. Unsupported build configurations fail before assets are emitted.
+Locale changes should normally use the default full-page navigation behavior
+of `setLocale()` so the URL, server-rendered document, and runtime locale stay
+in sync.
 
 In `__root.tsx` change the HTML lang attribute to the current locale.
 

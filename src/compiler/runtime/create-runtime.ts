@@ -181,6 +181,8 @@ ${injectCode("./extract-locale-from-url.js")}
 
 ${injectCode("./localize-url.js")}
 
+${injectCode("./route-strategy.js")}
+
 ${injectCode("./should-redirect.js")}
 
 ${injectCode("./localize-href.js")}

@@ -121,6 +121,42 @@ test("skips i18n middleware behavior for excluded routeStrategies", async () => 
 	expect(await response.text()).toBe("en|https://example.com/api/data");
 });
 
+test("localized URLs still match routeStrategies after delocalization", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "fr"],
+			},
+		}),
+		strategy: ["url", "cookie", "baseLocale"],
+		cookieName: "PARAGLIDE_LOCALE",
+		routeStrategies: [
+			{
+				match: "/dashboard/:path(.*)?",
+				strategy: ["cookie", "baseLocale"],
+			},
+			{ match: "/api/:path(.*)?", exclude: true },
+		],
+	});
+
+	const dashboard = await runtime.paraglideMiddleware(
+		new Request("https://example.com/fr/dashboard", {
+			headers: { cookie: "PARAGLIDE_LOCALE=en" },
+		}),
+		({ locale }) => new Response(locale)
+	);
+	expect(await dashboard.text()).toBe("en");
+
+	const api = await runtime.paraglideMiddleware(
+		new Request("https://example.com/fr/api/data", {
+			headers: { cookie: "PARAGLIDE_LOCALE=fr" },
+		}),
+		({ locale, request }) => new Response(`${locale}|${request.url}`)
+	);
+	expect(await api.text()).toBe("en|https://example.com/fr/api/data");
+});
+
 test("excluded routeStrategies keep request-scoped locale context and clone request when possible", async () => {
 	const runtime = await createParaglide({
 		blob: await newProject({

@@ -1,11 +1,11 @@
 import { toLocale } from "./check-locale.js";
 import { extractLocaleFromHeader } from "./extract-locale-from-header.js";
 import { extractLocaleFromUrl } from "./extract-locale-from-url.js";
+import { getStrategyForUrl } from "./route-strategy.js";
 import { isCustomStrategy } from "./strategy.js";
 import {
 	baseLocale,
 	cookieName,
-	getStrategyForUrl,
 	strategy,
 	TREE_SHAKE_COOKIE_STRATEGY_USED,
 	TREE_SHAKE_PREFERRED_LANGUAGE_STRATEGY_USED,
