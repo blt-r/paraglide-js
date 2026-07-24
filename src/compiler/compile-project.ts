@@ -12,6 +12,7 @@ import { createServerFile } from "./server/create-server-file.js";
 import { createRegistry } from "./registry.js";
 import { emitTsDeclarations } from "./emit-ts-declarations.js";
 import { createReadme } from "./create-readme.js";
+import { perLocaleBuildStaticLocaleExpression } from "./per-locale-build.js";
 
 const outputStructures = {
 	"locale-modules": localeModules,
@@ -57,10 +58,7 @@ export const compileProject = async (args: {
 			settings,
 			experimentalMiddlewareLocaleSplitting:
 				optionsWithDefaults.experimentalMiddlewareLocaleSplitting,
-			experimentalStaticLocale:
-				optionsWithDefaults.outputStructure === "message-modules"
-					? optionsWithDefaults.experimentalStaticLocale
-					: undefined,
+			experimentalStaticLocale: optionsWithDefaults.experimentalStaticLocale,
 		})
 	);
 
@@ -109,8 +107,8 @@ export const compileProject = async (args: {
 	// unused re-exports from the `m` barrel per entry, instead of bundling every
 	// message used anywhere in the app into one shared chunk that every entry
 	// downloads. Scoped to `messages/` so `runtime.js` (one level up, which has
-	// real side effects) is unaffected. Only relevant for `message-modules`,
-	// the structure with the re-export barrel.
+	// real side effects) is unaffected. This also lets locale-specialized builds
+	// discard the unselected locale modules before Rolldown creates source maps.
 	//
 	// `type: "module"` is required: this package.json creates a new module scope
 	// for `messages/`, and a package.json without a `type` field defaults to
@@ -118,7 +116,11 @@ export const compileProject = async (args: {
 	// Without it, the generated ESM `.js` files in `messages/` would be treated
 	// as CommonJS and fail to resolve.
 	// See https://github.com/opral/paraglide-js/issues/668
-	if (optionsWithDefaults.outputStructure === "message-modules") {
+	if (
+		optionsWithDefaults.outputStructure === "message-modules" ||
+		optionsWithDefaults.experimentalStaticLocale ===
+			perLocaleBuildStaticLocaleExpression
+	) {
 		output["messages/package.json"] =
 			JSON.stringify({ type: "module", sideEffects: false }, undefined, "\t") +
 			"\n";

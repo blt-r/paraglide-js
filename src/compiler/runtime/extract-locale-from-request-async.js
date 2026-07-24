@@ -1,5 +1,5 @@
 import { customServerStrategies, isCustomStrategy } from "./strategy.js";
-import { getStrategyForUrl } from "./variables.js";
+import { getStrategyForUrl } from "./route-strategy.js";
 import { toLocale } from "./check-locale.js";
 import { extractLocaleFromRequestWithStrategies } from "./extract-locale-from-request.js";
 
@@ -61,7 +61,11 @@ export const extractLocaleFromRequestAsync = async (request, options = {}) => {
 	}
 
 	// If no custom strategy provided a valid locale, fall back to sync version
-	return extractLocaleFromRequestWithStrategies(request, strategy, effectiveRequestUrl);
+	return extractLocaleFromRequestWithStrategies(
+		request,
+		strategy,
+		effectiveRequestUrl
+	);
 };
 
 /**

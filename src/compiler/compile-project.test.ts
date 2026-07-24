@@ -17,7 +17,6 @@ import {
 import { compileProject, getFallbackMap } from "./compile-project.js";
 import virtual from "@rollup/plugin-virtual";
 import { rolldown } from "rolldown";
-import { minify, transformWithOxc } from "vite";
 import { perLocaleBuildStaticLocaleExpression } from "./per-locale-build.js";
 
 beforeEach(() => {
@@ -75,7 +74,7 @@ test("emitGitignore", async () => {
 	expect(_false).not.toHaveProperty(".gitignore");
 });
 
-test("emits messages/package.json with sideEffects:false for message-modules", async () => {
+test("marks tree-shakeable generated message layouts as side-effect-free", async () => {
 	const project = await loadProjectInMemory({
 		blob: await newProject({
 			settings: {
@@ -93,6 +92,13 @@ test("emits messages/package.json with sideEffects:false for message-modules", a
 		project,
 		compilerOptions: { outputStructure: "locale-modules" },
 	});
+	const specializedLocaleModules = await compileProject({
+		project,
+		compilerOptions: {
+			outputStructure: "locale-modules",
+			experimentalStaticLocale: perLocaleBuildStaticLocaleExpression,
+		},
+	});
 
 	// message-modules: the message modules are side-effect-free, so bundlers can
 	// drop unused re-exports from the `m` barrel per entry instead of emitting one
@@ -104,40 +110,14 @@ test("emits messages/package.json with sideEffects:false for message-modules", a
 		sideEffects: false,
 	});
 
-	// scoped to message-modules (the structure with the re-export barrel)
 	expect(localeModules).not.toHaveProperty("messages/package.json");
-});
-
-test("Oxc specializes a bundled message to one locale", async () => {
-	const expression = perLocaleBuildStaticLocaleExpression;
-	const output = await compileProject({
-		project,
-		compilerOptions: {
-			experimentalStaticLocale: expression,
-		},
+	expect(specializedLocaleModules).toHaveProperty("messages/package.json");
+	expect(
+		JSON.parse(specializedLocaleModules["messages/package.json"]!)
+	).toEqual({
+		type: "module",
+		sideEffects: false,
 	});
-	const bundled = await bundleCode(
-		output,
-		`import { sad_penguin_bundle } from "./paraglide/messages.js";
-		console.log(sad_penguin_bundle());`
-	);
-	const transformed = await transformWithOxc(bundled, "message-chunk.js", {
-		lang: "js",
-		sourceType: "module",
-		define: {
-			"globalThis.__PARAGLIDE_STATIC_LOCALE__": JSON.stringify("de"),
-		},
-		sourcemap: false,
-	});
-	const specialized = await minify("message-chunk.js", transformed.code, {
-		module: true,
-		compress: true,
-		mangle: true,
-	});
-
-	expect(specialized.errors).toEqual([]);
-	expect(specialized.code).toContain("Eine einfache Nachricht.");
-	expect(specialized.code).not.toContain("A simple message.");
 });
 
 test("emitPrettierIgnore", async () => {

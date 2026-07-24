@@ -4,60 +4,36 @@ import type { Plugin } from "vite";
 import type { CompilerOptions } from "../../compiler/compiler-options.js";
 import { perLocaleBuildStaticLocaleExpression } from "../../compiler/per-locale-build.js";
 import type { PerLocaleBuildSettings } from "./types.js";
-import { createPerLocaleBuildVitePlugin } from "./vite-plugin.js";
+import { createViteLocaleEnvironmentPlugin } from "./vite-environments.js";
 
 export function createPerLocaleBuildPlugins(args: {
 	compilerOptions: CompilerOptions;
 	createCompilerPlugin: (options: CompilerOptions) => Plugin;
 }): Plugin[] {
-	const { compilerOptions } = args;
-	validateCompilerOptions(compilerOptions);
+	validateCompilerOptions(args.compilerOptions);
+	const compilerOptions = createPerLocaleCompilerOptions(args.compilerOptions);
+	return [
+		args.createCompilerPlugin(compilerOptions),
+		createViteLocaleEnvironmentPlugin({
+			settings: () => loadSettings(compilerOptions),
+		}),
+	];
+}
 
-	const perLocaleCompilerOptions: CompilerOptions = {
+function createPerLocaleCompilerOptions(
+	compilerOptions: CompilerOptions
+): CompilerOptions {
+	return {
 		...compilerOptions,
-		outputStructure: compilerOptions.outputStructure ?? "message-modules",
+		outputStructure: compilerOptions.outputStructure ?? "locale-modules",
 		experimentalStaticLocale: perLocaleBuildStaticLocaleExpression,
 		additionalFiles: {
 			...compilerOptions.additionalFiles,
 		},
 	};
-
-	return [
-		args.createCompilerPlugin(perLocaleCompilerOptions),
-		createPerLocaleBuildVitePlugin({
-			// Reload settings for every client build so Vite build --watch picks up
-			// locale additions/removals instead of reusing the first build's project.
-			settings: () => loadSettings(perLocaleCompilerOptions),
-			generatedDirectory: perLocaleCompilerOptions.outdir,
-			onFrameworkDetected(frameworkFiles) {
-				assertGeneratedFilesAvailable(
-					frameworkFiles,
-					compilerOptions.additionalFiles
-				);
-				perLocaleCompilerOptions.additionalFiles = {
-					...perLocaleCompilerOptions.additionalFiles,
-					...frameworkFiles,
-				};
-			},
-		}),
-	];
 }
 
 function validateCompilerOptions(options: CompilerOptions): void {
-	if (
-		options.strategy !== undefined &&
-		options.strategy[0] !== "url" &&
-		options.strategy[0] !== "cookie"
-	) {
-		throw new Error(
-			'experimentalPerLocaleBuild requires the first locale strategy to be "url" or "cookie".'
-		);
-	}
-	if (options.routeStrategies !== undefined) {
-		throw new Error(
-			"experimentalPerLocaleBuild does not support routeStrategies."
-		);
-	}
 	if (options.experimentalStaticLocale !== undefined) {
 		throw new Error(
 			"experimentalPerLocaleBuild cannot be combined with experimentalStaticLocale because it controls the compiler's static locale expression."
@@ -70,24 +46,11 @@ function validateCompilerOptions(options: CompilerOptions): void {
 	}
 	if (
 		options.outputStructure !== undefined &&
-		options.outputStructure !== "message-modules"
+		options.outputStructure !== "locale-modules"
 	) {
 		throw new Error(
-			'experimentalPerLocaleBuild currently requires outputStructure: "message-modules".'
+			'experimentalPerLocaleBuild requires outputStructure: "locale-modules".'
 		);
-	}
-}
-
-function assertGeneratedFilesAvailable(
-	generatedFiles: Record<string, string>,
-	additionalFiles: CompilerOptions["additionalFiles"]
-): void {
-	for (const fileName of Object.keys(generatedFiles)) {
-		if (Object.hasOwn(additionalFiles ?? {}, fileName)) {
-			throw new Error(
-				`experimentalPerLocaleBuild needs to generate ${JSON.stringify(fileName)}, but additionalFiles already defines that path.`
-			);
-		}
 	}
 }
 

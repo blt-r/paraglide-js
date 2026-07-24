@@ -116,7 +116,7 @@ const compileBundleFunction = (args: {
 	experimentalMiddlewareLocaleSplitting: boolean;
 	/**
 	 * Static locale expression emitted inside the message function so a
-	 * chunk-local minifier can specialize its locale branches.
+	 * bundler can tree-shake unselected locale modules.
 	 */
 	experimentalStaticLocale?: CompilerOptions["experimentalStaticLocale"];
 	/**
@@ -179,7 +179,14 @@ const compileBundleFunction = (args: {
 			})
 			.join("\n");
 
-	const englishMatchTableDoc = buildEnglishMatchTableDoc(args.bundle);
+	const perLocaleBuild =
+		args.experimentalStaticLocale === perLocaleBuildStaticLocaleExpression;
+	// A locale-specialized graph may ship source maps. Keeping the English
+	// pattern preview in the shared dispatcher would leak base-locale message
+	// text into every locale's map even after the English module is tree-shaken.
+	const englishMatchTableDoc = perLocaleBuild
+		? ""
+		: buildEnglishMatchTableDoc(args.bundle);
 
 	const commonJsDoc = `/**
 ${englishMatchTableDoc}${jsDocBundleFunctionTypes({
@@ -214,8 +221,6 @@ ${englishMatchTableDoc}${jsDocBundleFunctionTypes({
 		return `\n${indent}trackMessageCall("${safeBundleId}", locale)`;
 	};
 
-	const perLocaleBuild =
-		args.experimentalStaticLocale === perLocaleBuildStaticLocaleExpression;
 	const localeResolutionStatement = (indent: string): string => {
 		const localeExpression = perLocaleBuild
 			? `${perLocaleBuildStaticLocaleExpression} ?? options.locale ?? getLocale()`

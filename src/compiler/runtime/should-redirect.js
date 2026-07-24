@@ -3,7 +3,10 @@ import { toLocale } from "./check-locale.js";
 import { getLocale, getLocaleForUrl } from "./get-locale.js";
 import { getUrlOrigin } from "./get-url-origin.js";
 import { extractLocaleFromRequestAsync } from "./extract-locale-from-request-async.js";
-import { getStrategyForUrl, isExcludedByRouteStrategy } from "./variables.js";
+import {
+	getStrategyForUrl,
+	isExcludedByRouteStrategy,
+} from "./route-strategy.js";
 
 /**
  * @typedef {object} ShouldRedirectServerInput
@@ -131,11 +134,17 @@ async function resolveLocale(input, currentUrl) {
  * @returns {URL}
  */
 function resolveUrl(input) {
-	if ("effectiveRequestUrl" in input && input.effectiveRequestUrl instanceof URL) {
+	if (
+		"effectiveRequestUrl" in input &&
+		input.effectiveRequestUrl instanceof URL
+	) {
 		return new URL(input.effectiveRequestUrl.href);
 	}
 
-	if ("effectiveRequestUrl" in input && typeof input.effectiveRequestUrl === "string") {
+	if (
+		"effectiveRequestUrl" in input &&
+		typeof input.effectiveRequestUrl === "string"
+	) {
 		return new URL(
 			input.effectiveRequestUrl,
 			input.request ? input.request.url : getUrlOrigin()

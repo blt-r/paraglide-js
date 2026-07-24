@@ -1,14 +1,14 @@
-import { expect, test } from "vitest";
-import { memfs } from "memfs";
 import {
 	loadProjectInMemory,
 	newProject,
 	saveProjectToDirectory,
 } from "@inlang/sdk";
-import { paraglideVitePlugin } from "./vite.js";
+import { memfs } from "memfs";
+import { expect, test } from "vitest";
 import { perLocaleBuildStaticLocaleExpression } from "../compiler/per-locale-build.js";
+import { paraglideVitePlugin } from "./vite.js";
 
-test("experimentalPerLocaleBuild configures the compiler and emits the detected framework adapter", async () => {
+test("experimentalPerLocaleBuild generates locale source modules and installs the Vite environment orchestrator", async () => {
 	const project = await loadProjectInMemory({
 		blob: await newProject({
 			settings: { baseLocale: "en", locales: ["en", "de"] },
@@ -26,47 +26,38 @@ test("experimentalPerLocaleBuild configures the compiler and emits the detected 
 		outdir: "/src/paraglide",
 		fs,
 		experimentalPerLocaleBuild: true,
+		strategy: ["preferredLanguage", "baseLocale"],
 		additionalFiles: { "custom.js": "export const custom = true;\n" },
 	});
-	expect(Array.isArray(plugins)).toBe(true);
-	if (!Array.isArray(plugins))
+	if (!Array.isArray(plugins)) {
 		throw new Error("Expected multiple Vite plugins");
+	}
 	expect(plugins.map((plugin) => plugin.name)).toEqual([
 		"unplugin-paraglide-js",
-		"paraglide-per-locale-build",
+		"paraglide-vite-locale-environments",
 	]);
 
 	const compiler = plugins[0]!;
-	const perLocaleBuild = plugins[1]!;
-	if (typeof perLocaleBuild.configResolved !== "function") {
-		throw new Error("Expected the per-locale configResolved hook");
-	}
-	perLocaleBuild.configResolved.call(
-		{} as never,
-		{
-			root: "/",
-			plugins: [{ name: "tanstack-start-core:config" }],
-			define: {},
-			build: { ssr: false },
-		} as never
-	);
 	if (typeof compiler.buildStart !== "function") {
 		throw new Error("Expected the compiler buildStart hook");
 	}
 	await compiler.buildStart.call({ addWatchFile() {} } as never, {} as never);
 
 	expect(
-		await fs.promises.readFile(
-			"/src/paraglide/tanstack-start.server.js",
-			"utf8"
-		)
-	).toContain("createStartHandler");
+		await fs.promises.readFile("/src/paraglide/messages/en.js", "utf8")
+	).toBeDefined();
 	expect(
-		await fs.promises.readFile("/src/paraglide/custom.js", "utf8")
-	).toContain("export const custom = true;");
+		await fs.promises.readFile("/src/paraglide/messages/de.js", "utf8")
+	).toBeDefined();
 	expect(
 		await fs.promises.readFile("/src/paraglide/runtime.js", "utf8")
 	).toContain(perLocaleBuildStaticLocaleExpression);
+	expect(
+		await fs.promises.readFile("/src/paraglide/custom.js", "utf8")
+	).toContain("export const custom = true;");
+	await expect(
+		fs.promises.readFile("/src/paraglide/tanstack-start.server.js", "utf8")
+	).rejects.toThrow();
 });
 
 test("experimentalPerLocaleBuild rejects conflicting compiler options", () => {
@@ -89,44 +80,19 @@ test("experimentalPerLocaleBuild rejects conflicting compiler options", () => {
 		paraglideVitePlugin({
 			...common,
 			experimentalPerLocaleBuild: true,
-			outputStructure: "locale-modules",
+			outputStructure: "message-modules",
 		})
-	).toThrow('requires outputStructure: "message-modules"');
+	).toThrow('requires outputStructure: "locale-modules"');
 	expect(() =>
 		paraglideVitePlugin({
 			...common,
 			experimentalPerLocaleBuild: true,
-			strategy: ["preferredLanguage", "baseLocale"],
+			routeStrategies: [
+				{
+					match: "/api/:path(.*)?",
+					exclude: true,
+				},
+			],
 		})
-	).toThrow('first locale strategy to be "url" or "cookie"');
-	expect(() =>
-		paraglideVitePlugin({
-			...common,
-			experimentalPerLocaleBuild: true,
-			routeStrategies: [],
-		})
-	).toThrow("does not support routeStrategies");
-	const plugins = paraglideVitePlugin({
-		...common,
-		experimentalPerLocaleBuild: true,
-		additionalFiles: { "tanstack-start.server.js": "user content" },
-	});
-	if (!Array.isArray(plugins)) {
-		throw new Error("Expected multiple Vite plugins");
-	}
-	const configResolved = plugins[1]?.configResolved;
-	if (typeof configResolved !== "function") {
-		throw new Error("Expected the per-locale configResolved hook");
-	}
-	expect(() =>
-		configResolved.call(
-			{} as never,
-			{
-				root: "/",
-				plugins: [{ name: "tanstack-start-core:config" }],
-				define: {},
-				build: { ssr: false },
-			} as never
-		)
-	).toThrow("additionalFiles already defines that path");
+	).not.toThrow();
 });
