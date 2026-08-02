@@ -92,6 +92,7 @@ import * as runtime from "./runtime.js";
  * ```
  */
 export async function paraglideMiddleware(request, resolve, options) {
+	let requestAsyncLocalStorage = runtime.serverAsyncLocalStorage;
 	// %async-local-storage
 	const url = resolveMiddlewareUrl(request, options?.effectiveRequestUrl);
 	const origin = url.origin;
@@ -102,7 +103,7 @@ export async function paraglideMiddleware(request, resolve, options) {
 		/** @type {Set<string>} */
 		const messageCalls = new Set();
 		return /** @type {Response} */ (
-			await runtime.serverAsyncLocalStorage?.run(
+			await requestAsyncLocalStorage?.run(
 				{ locale, origin, messageCalls },
 				() => resolve({ locale, request: newRequest })
 			)
@@ -156,7 +157,7 @@ export async function paraglideMiddleware(request, resolve, options) {
 	/** @type {Set<string>} */
 	const messageCalls = new Set();
 
-	const response = await runtime.serverAsyncLocalStorage?.run(
+	const response = await requestAsyncLocalStorage?.run(
 		{ locale, origin, messageCalls },
 		() => resolve({ locale, request: newRequest })
 	);
