@@ -1,5 +1,11 @@
 # @inlang/paraglide-js
 
+## 2.23.1
+
+### Patch Changes
+
+- 6f9b062: Keep the server middleware's AsyncLocalStorage available when module instrumentation snapshots mutable exports.
+
 ## 2.23.0
 
 ### Minor Changes
