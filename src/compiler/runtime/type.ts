@@ -11,6 +11,7 @@ export type Runtime = {
 	urlPatterns: typeof import("./variables.js").urlPatterns;
 	disableAsyncLocalStorage: typeof import("./variables.js").disableAsyncLocalStorage;
 	serverAsyncLocalStorage: typeof import("./variables.js").serverAsyncLocalStorage;
+	getServerAsyncLocalStorage: typeof import("./variables.js").getServerAsyncLocalStorage;
 	experimentalMiddlewareLocaleSplitting: typeof import("./variables.js").experimentalMiddlewareLocaleSplitting;
 	isServer: typeof import("./variables.js").isServer;
 	experimentalStaticLocale: typeof import("./variables.js").experimentalStaticLocale;

@@ -37,16 +37,25 @@ ${injectCode("./middleware.js")}
 	const innerIndent = `${indent}  `;
 	const asyncLocalStorageBlock = args.compilerOptions.disableAsyncLocalStorage
 		? [
-				`${indent}if (!runtime.serverAsyncLocalStorage) {`,
-				`${innerIndent}runtime.overwriteServerAsyncLocalStorage(createMockAsyncLocalStorage());`,
+				`${indent}requestAsyncLocalStorage = runtime.getServerAsyncLocalStorage();`,
+				`${indent}if (!requestAsyncLocalStorage) {`,
+				`${innerIndent}requestAsyncLocalStorage = createMockAsyncLocalStorage();`,
+				`${innerIndent}runtime.overwriteServerAsyncLocalStorage(requestAsyncLocalStorage);`,
 				`${indent}}`,
 			]
 		: [
-				`${indent}if (!runtime.disableAsyncLocalStorage && !runtime.serverAsyncLocalStorage) {`,
+				`${indent}requestAsyncLocalStorage = runtime.getServerAsyncLocalStorage();`,
+				`${indent}if (!runtime.disableAsyncLocalStorage && !requestAsyncLocalStorage) {`,
 				`${innerIndent}const { AsyncLocalStorage } = await import("async_hooks");`,
-				`${innerIndent}runtime.overwriteServerAsyncLocalStorage(new AsyncLocalStorage());`,
-				`${indent}} else if (!runtime.serverAsyncLocalStorage) {`,
-				`${innerIndent}runtime.overwriteServerAsyncLocalStorage(createMockAsyncLocalStorage());`,
+				`${innerIndent}requestAsyncLocalStorage = runtime.getServerAsyncLocalStorage();`,
+				`${innerIndent}if (!requestAsyncLocalStorage) {`,
+				`${innerIndent}  requestAsyncLocalStorage = new AsyncLocalStorage();`,
+				`${innerIndent}  runtime.overwriteServerAsyncLocalStorage(requestAsyncLocalStorage);`,
+				`${innerIndent}}`,
+				`${indent}}`,
+				`${indent}if (!requestAsyncLocalStorage) {`,
+				`${innerIndent}requestAsyncLocalStorage = createMockAsyncLocalStorage();`,
+				`${innerIndent}runtime.overwriteServerAsyncLocalStorage(requestAsyncLocalStorage);`,
 				`${indent}}`,
 			];
 

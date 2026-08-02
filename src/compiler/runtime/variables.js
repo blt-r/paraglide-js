@@ -77,6 +77,18 @@ export const urlPatterns = [];
  */
 export let serverAsyncLocalStorage = undefined;
 
+/**
+ * Returns the current server-side async local storage instance.
+ *
+ * Accessing the mutable value through a function keeps it observable when
+ * module interceptors wrap exported bindings and snapshot their initial value.
+ *
+ * @returns {ParaglideAsyncLocalStorage | undefined}
+ */
+export function getServerAsyncLocalStorage() {
+	return serverAsyncLocalStorage;
+}
+
 export const disableAsyncLocalStorage = false;
 
 export const experimentalMiddlewareLocaleSplitting = false;
