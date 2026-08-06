@@ -1,5 +1,11 @@
 # @inlang/paraglide-js
 
+## 2.23.2
+
+### Patch Changes
+
+- b8af4b1: Embed TypeScript sources in published JavaScript sourcemaps and stop emitting declaration sourcemaps that reference unpublished source files.
+
 ## 2.23.1
 
 ### Patch Changes
