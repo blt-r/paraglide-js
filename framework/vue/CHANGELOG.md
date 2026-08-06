@@ -1,5 +1,11 @@
 # @inlang/paraglide-js-vue
 
+## 1.0.3
+
+### Patch Changes
+
+- b8af4b1: Embed TypeScript sources in published JavaScript sourcemaps and stop emitting declaration sourcemaps that reference unpublished source files.
+
 ## 1.0.2
 
 ### Patch Changes
