@@ -10,7 +10,7 @@
 		"target": "ES2022",
 		"allowSyntheticDefaultImports": true,
 		"declaration": true,
-		"declarationMap": true,
+		"declarationMap": false,
 		"strict": true,
 		"forceConsistentCasingInFileNames": true,
 		"skipLibCheck": true,
