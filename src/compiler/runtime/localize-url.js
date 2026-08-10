@@ -67,9 +67,7 @@ export function localizeUrl(url, options) {
 	for (const element of urlPatterns) {
 		// match localized patterns
 		for (const [, localizedPattern] of element.localized) {
-			const match = new URLPattern(localizedPattern, urlObj.href).exec(
-				urlObj.href
-			);
+			const match = getUrlPattern(localizedPattern, urlObj).exec(urlObj.href);
 
 			if (!match) {
 				continue;
@@ -90,7 +88,7 @@ export function localizeUrl(url, options) {
 			);
 			return fillMissingUrlParts(localizedUrl, match);
 		}
-		const unlocalizedMatch = new URLPattern(element.pattern, urlObj.href).exec(
+		const unlocalizedMatch = getUrlPattern(element.pattern, urlObj).exec(
 			urlObj.href
 		);
 		if (unlocalizedMatch) {
@@ -197,9 +195,7 @@ export function deLocalizeUrl(url) {
 	for (const element of urlPatterns) {
 		// Iterate over localized versions
 		for (const [, localizedPattern] of element.localized) {
-			const match = new URLPattern(localizedPattern, urlObj.href).exec(
-				urlObj.href
-			);
+			const match = getUrlPattern(localizedPattern, urlObj).exec(urlObj.href);
 
 			if (match) {
 				// Convert localized URL back to the base pattern
@@ -210,7 +206,7 @@ export function deLocalizeUrl(url) {
 			}
 		}
 		// match unlocalized pattern
-		const unlocalizedMatch = new URLPattern(element.pattern, urlObj.href).exec(
+		const unlocalizedMatch = getUrlPattern(element.pattern, urlObj).exec(
 			urlObj.href
 		);
 		if (unlocalizedMatch) {
@@ -387,4 +383,28 @@ export function aggregateGroups(match) {
 		...match.search.groups,
 		...match.username.groups,
 	};
+}
+
+/** @type {Map<string, URLPattern>} */
+const urlPatternCache = new Map();
+
+/**
+ * URLPattern's base URL affects relative patterns. Root-relative and absolute
+ * patterns only depend on the origin, so reuse their compiled matchers across
+ * calls while preserving the existing behavior for other patterns.
+ *
+ * @param {string} pattern
+ * @param {URL} url
+ * @returns {URLPattern}
+ */
+function getUrlPattern(pattern, url) {
+	const base =
+		pattern.startsWith("/") || pattern.includes("://") ? url.origin : url.href;
+	const key = `${base}\u0000${pattern}`;
+	let compiled = urlPatternCache.get(key);
+	if (compiled === undefined) {
+		compiled = new URLPattern(pattern, url.href);
+		urlPatternCache.set(key, compiled);
+	}
+	return compiled;
 }
