@@ -388,23 +388,42 @@ export function aggregateGroups(match) {
 /** @type {Map<string, URLPattern>} */
 const urlPatternCache = new Map();
 
+const URL_PATTERN_CACHE_LIMIT = 128;
+const ABSOLUTE_URL_PATTERN = /^[A-Za-z][A-Za-z\d+.-]*:\/\//;
+
 /**
- * URLPattern's base URL affects relative patterns. Root-relative and absolute
- * patterns only depend on the origin, so reuse their compiled matchers across
- * calls while preserving the existing behavior for other patterns.
+ * URLPattern's base URL affects relative patterns. Absolute patterns only
+ * depend on the pattern itself, while root-relative patterns also depend on
+ * the URL origin. Other relative patterns are deliberately not cached because
+ * their semantics depend on the complete base URL.
  *
  * @param {string} pattern
  * @param {URL} url
  * @returns {URLPattern}
  */
 function getUrlPattern(pattern, url) {
-	const base =
-		pattern.startsWith("/") || pattern.includes("://") ? url.origin : url.href;
-	const key = `${base}\u0000${pattern}`;
-	let compiled = urlPatternCache.get(key);
-	if (compiled === undefined) {
-		compiled = new URLPattern(pattern, url.href);
-		urlPatternCache.set(key, compiled);
+	const isAbsolutePattern = ABSOLUTE_URL_PATTERN.test(pattern);
+	const isRootRelativePattern = pattern.startsWith("/");
+	if (!isAbsolutePattern && !isRootRelativePattern) {
+		return new URLPattern(pattern, url.href);
 	}
+
+	const key = isAbsolutePattern
+		? pattern
+		: JSON.stringify([url.origin, pattern]);
+	const cached = urlPatternCache.get(key);
+	if (cached !== undefined) {
+		// Refresh the entry so frequently used patterns stay in the bounded cache.
+		urlPatternCache.delete(key);
+		urlPatternCache.set(key, cached);
+		return cached;
+	}
+
+	const compiled = new URLPattern(pattern, url.href);
+	if (urlPatternCache.size >= URL_PATTERN_CACHE_LIMIT) {
+		const oldestKey = urlPatternCache.keys().next().value;
+		if (oldestKey !== undefined) urlPatternCache.delete(oldestKey);
+	}
+	urlPatternCache.set(key, compiled);
 	return compiled;
 }
