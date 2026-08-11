@@ -652,6 +652,39 @@ test("defining no localized pattern leads to a fallthrough", async () => {
 	).toBe("https://example.com/de/specific-path");
 });
 
+test("does not cache base-relative patterns containing protocol syntax", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "de"],
+			},
+		}),
+		strategy: ["url"],
+		urlPatterns: [
+			{
+				pattern: "specific-path{/:value(https://.*)}?",
+				localized: [
+					["en", "specific-path{/:value(https://.*)}?"],
+					["de", "/de/specific-path"],
+				],
+			},
+		],
+	});
+
+	// Warm the pattern against one base path before using another base path.
+	expect(
+		runtime.localizeUrl("https://example.com/a/specific-path", {
+			locale: "de",
+		}).href
+	).toBe("https://example.com/de/specific-path");
+	expect(
+		runtime.localizeUrl("https://example.com/b/specific-path", {
+			locale: "de",
+		}).href
+	).toBe("https://example.com/de/specific-path");
+});
+
 // https://github.com/opral/inlang-paraglide-js/issues/456
 test("routing to a 404 page", async () => {
 	const runtime = await createParaglide({
