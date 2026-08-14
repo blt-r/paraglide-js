@@ -78,6 +78,141 @@ test("pathname based localization", async () => {
 	);
 });
 
+// https://github.com/opral/paraglide-js/issues/473
+test("normalizes trailing slashes before matching translated pathnames", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "de"],
+			},
+		}),
+		strategy: ["url", "baseLocale"],
+		trailingSlash: "never",
+		urlPatterns: [
+			{
+				pattern: "/",
+				localized: [
+					["de", "/de"],
+					["en", "/"],
+				],
+			},
+			{
+				pattern: "/about",
+				localized: [
+					["de", "/de/ueber"],
+					["en", "/about"],
+				],
+			},
+		],
+	});
+
+	expect(runtime.trailingSlash).toBe("never");
+	expect("normalizeTrailingSlash" in runtime).toBe(false);
+	expect("execUrlPattern" in runtime).toBe(false);
+	expect(runtime.extractLocaleFromUrl("https://example.com/de/")).toBe("de");
+	expect(runtime.extractLocaleFromUrl("https://example.com/de/ueber/")).toBe(
+		"de"
+	);
+	expect(runtime.deLocalizeUrl("https://example.com/de/").href).toBe(
+		"https://example.com/"
+	);
+	expect(runtime.deLocalizeUrl("https://example.com/de/ueber/").href).toBe(
+		"https://example.com/about"
+	);
+	expect(
+		runtime.localizeUrl("https://example.com/about/", { locale: "de" }).href
+	).toBe("https://example.com/de/ueber");
+	expect(
+		runtime.localizeUrl("https://example.com/about/?ref=docs#section", {
+			locale: "de",
+		}).href
+	).toBe("https://example.com/de/ueber?ref=docs#section");
+});
+
+test("adds trailing slashes when configured", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "de"],
+			},
+		}),
+		strategy: ["url"],
+		trailingSlash: "always",
+		urlPatterns: [
+			{
+				// Existing patterns do not need to be rewritten for the policy.
+				pattern: "/about",
+				localized: [
+					["de", "/de/ueber"],
+					["en", "/about"],
+				],
+			},
+		],
+	});
+
+	expect(
+		runtime.localizeUrl("https://example.com/about", { locale: "de" }).href
+	).toBe("https://example.com/de/ueber/");
+	expect(runtime.deLocalizeUrl("https://example.com/de/ueber").href).toBe(
+		"https://example.com/about/"
+	);
+});
+
+test("keeps unmatched custom URLs unchanged", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "de"],
+			},
+		}),
+		strategy: ["url"],
+		trailingSlash: "never",
+		urlPatterns: [
+			{
+				pattern: "/about",
+				localized: [
+					["en", "/about"],
+					["de", "/de/ueber"],
+				],
+			},
+		],
+	});
+
+	const input = new URL("https://example.com/assets/");
+	expect(runtime.localizeUrl(input, { locale: "de" })).toBe(input);
+	expect(runtime.deLocalizeUrl(input)).toBe(input);
+	expect(input.href).toBe("https://example.com/assets/");
+});
+
+test("omitting trailingSlash preserves exact custom pattern matching", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "de"],
+			},
+		}),
+		strategy: ["url"],
+		urlPatterns: [
+			{
+				pattern: "/about",
+				localized: [
+					["en", "/about"],
+					["de", "/de/ueber"],
+				],
+			},
+		],
+	});
+
+	const input = new URL("https://example.com/de/ueber/");
+	expect(runtime.trailingSlash).toBeUndefined();
+	expect(runtime.extractLocaleFromUrl(input)).toBeUndefined();
+	expect(runtime.deLocalizeUrl(input)).toBe(input);
+});
+
 test("cross domain urls", async () => {
 	const runtime = await createParaglide({
 		blob: await newProject({

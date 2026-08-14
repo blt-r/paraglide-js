@@ -5,8 +5,11 @@ import { assertIsLocale, toLocale } from "./check-locale.js";
 import {
 	baseLocale,
 	TREE_SHAKE_DEFAULT_URL_PATTERN_USED,
+	trailingSlash,
 	urlPatterns,
 } from "./variables.js";
+import { normalizeTrailingSlash } from "./normalize-trailing-slash.js";
+import { execUrlPattern } from "./exec-url-pattern.js";
 
 /**
  * Lower-level URL localization function, primarily used in server contexts.
@@ -61,13 +64,20 @@ export function localizeUrl(url, options) {
 		return localizeUrlDefaultPattern(url, targetLocale);
 	}
 
-	const urlObj = typeof url === "string" ? new URL(url) : url;
+	const originalUrl = typeof url === "string" ? new URL(url) : url;
+	const urlObj =
+		trailingSlash === undefined
+			? originalUrl
+			: normalizeTrailingSlash(new URL(originalUrl));
 
 	// Iterate over URL patterns
 	for (const element of urlPatterns) {
 		// match localized patterns
 		for (const [, localizedPattern] of element.localized) {
-			const match = getUrlPattern(localizedPattern, urlObj).exec(urlObj.href);
+			const match = execUrlPattern(
+				getUrlPattern(localizedPattern, urlObj),
+				urlObj
+			);
 
 			if (!match) {
 				continue;
@@ -86,10 +96,11 @@ export function localizeUrl(url, options) {
 				aggregateGroups(match),
 				urlObj.origin
 			);
-			return fillMissingUrlParts(localizedUrl, match);
+			return normalizeTrailingSlash(fillMissingUrlParts(localizedUrl, match));
 		}
-		const unlocalizedMatch = getUrlPattern(element.pattern, urlObj).exec(
-			urlObj.href
+		const unlocalizedMatch = execUrlPattern(
+			getUrlPattern(element.pattern, urlObj),
+			urlObj
 		);
 		if (unlocalizedMatch) {
 			const targetPattern = element.localized.find(
@@ -101,12 +112,14 @@ export function localizeUrl(url, options) {
 					aggregateGroups(unlocalizedMatch),
 					urlObj.origin
 				);
-				return fillMissingUrlParts(localizedUrl, unlocalizedMatch);
+				return normalizeTrailingSlash(
+					fillMissingUrlParts(localizedUrl, unlocalizedMatch)
+				);
 			}
 		}
 	}
 	// If no match found, return the original URL
-	return urlObj;
+	return originalUrl;
 }
 
 /**
@@ -117,14 +130,15 @@ export function localizeUrl(url, options) {
  * @returns {URL}
  */
 function localizeUrlDefaultPattern(url, locale) {
-	const urlObj =
-		typeof url === "string" ? new URL(url, getUrlOrigin()) : new URL(url);
+	const urlObj = normalizeTrailingSlash(
+		typeof url === "string" ? new URL(url, getUrlOrigin()) : new URL(url)
+	);
 
 	const currentLocale = extractLocaleFromUrl(urlObj);
 
 	// If current locale matches target locale, no change needed
 	if (currentLocale === locale) {
-		return urlObj;
+		return normalizeTrailingSlash(urlObj);
 	}
 
 	const pathSegments = urlObj.pathname.split("/").filter(Boolean);
@@ -142,7 +156,7 @@ function localizeUrlDefaultPattern(url, locale) {
 		urlObj.pathname = "/" + locale + "/" + pathSegments.join("/");
 	}
 
-	return urlObj;
+	return normalizeTrailingSlash(urlObj);
 }
 
 /**
@@ -189,25 +203,33 @@ export function deLocalizeUrl(url) {
 		return deLocalizeUrlDefaultPattern(url);
 	}
 
-	const urlObj = typeof url === "string" ? new URL(url) : url;
+	const originalUrl = typeof url === "string" ? new URL(url) : url;
+	const urlObj =
+		trailingSlash === undefined
+			? originalUrl
+			: normalizeTrailingSlash(new URL(originalUrl));
 
 	// Iterate over URL patterns
 	for (const element of urlPatterns) {
 		// Iterate over localized versions
 		for (const [, localizedPattern] of element.localized) {
-			const match = getUrlPattern(localizedPattern, urlObj).exec(urlObj.href);
+			const match = execUrlPattern(
+				getUrlPattern(localizedPattern, urlObj),
+				urlObj
+			);
 
 			if (match) {
 				// Convert localized URL back to the base pattern
 				const groups = aggregateGroups(match);
 
 				const baseUrl = fillPattern(element.pattern, groups, urlObj.origin);
-				return fillMissingUrlParts(baseUrl, match);
+				return normalizeTrailingSlash(fillMissingUrlParts(baseUrl, match));
 			}
 		}
 		// match unlocalized pattern
-		const unlocalizedMatch = getUrlPattern(element.pattern, urlObj).exec(
-			urlObj.href
+		const unlocalizedMatch = execUrlPattern(
+			getUrlPattern(element.pattern, urlObj),
+			urlObj
 		);
 		if (unlocalizedMatch) {
 			const baseUrl = fillPattern(
@@ -215,11 +237,13 @@ export function deLocalizeUrl(url) {
 				aggregateGroups(unlocalizedMatch),
 				urlObj.origin
 			);
-			return fillMissingUrlParts(baseUrl, unlocalizedMatch);
+			return normalizeTrailingSlash(
+				fillMissingUrlParts(baseUrl, unlocalizedMatch)
+			);
 		}
 	}
 	// no match found return the original url
-	return urlObj;
+	return originalUrl;
 }
 
 /**
@@ -228,8 +252,9 @@ export function deLocalizeUrl(url) {
  * @returns {URL}
  */
 function deLocalizeUrlDefaultPattern(url) {
-	const urlObj =
-		typeof url === "string" ? new URL(url, getUrlOrigin()) : new URL(url);
+	const urlObj = normalizeTrailingSlash(
+		typeof url === "string" ? new URL(url, getUrlOrigin()) : new URL(url)
+	);
 	const pathSegments = urlObj.pathname.split("/").filter(Boolean);
 
 	// If first segment is a locale, remove it
@@ -237,7 +262,7 @@ function deLocalizeUrlDefaultPattern(url) {
 		urlObj.pathname = "/" + pathSegments.slice(1).join("/");
 	}
 
-	return urlObj;
+	return normalizeTrailingSlash(urlObj);
 }
 
 /**

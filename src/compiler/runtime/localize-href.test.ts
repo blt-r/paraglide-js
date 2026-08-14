@@ -194,6 +194,28 @@ test("default url patterns to improve out of the box experience", async () => {
 	);
 });
 
+test("normalizes localized root hrefs and anchors", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "de"],
+			},
+		}),
+		isServer: "false",
+		strategy: ["url"],
+		trailingSlash: "never",
+	});
+
+	globalThis.window = { location: new URL("http://example.com") } as any;
+
+	expect(runtime.localizeHref("/", { locale: "de" })).toBe("/de");
+	expect(runtime.localizeHref("/#section", { locale: "de" })).toBe(
+		"/de#section"
+	);
+	expect(runtime.deLocalizeHref("/de/")).toBe("/");
+});
+
 test("normalizes mixed-case explicit locales in localizeHref", async () => {
 	const runtime = await createParaglide({
 		blob: await newProject({
