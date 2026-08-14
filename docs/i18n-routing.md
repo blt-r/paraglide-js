@@ -616,6 +616,18 @@ This is especially important for path-based localization where one locale has a 
 
 ### Trailing slashes
 
-URLPattern treats `/about` and `/about/` as different paths. To handle both consistently, your framework or server should normalize trailing slashes before the middleware runs. Most frameworks (Next.js, SvelteKit, Astro) handle this automatically.
+URLPattern treats `/about` and `/about/` as different paths. You can make Paraglide canonicalize localized URLs before matching and after generation with the `trailingSlash` compiler option:
 
-If you're seeing redirect loops involving trailing slashes, check your framework's trailing slash configuration.
+```ts
+paraglideVitePlugin({
+	project: "./project.inlang",
+	outdir: "./src/paraglide",
+	trailingSlash: "never", // or "always"
+});
+```
+
+`"never"` removes trailing slashes and `"always"` adds them. The root path `/` always remains `/`, while query parameters and hashes are preserved. Existing custom `urlPatterns` can keep their trailing slash style; Paraglide treats the other terminal-slash form as an alias when this option is set. Unmatched custom patterns remain unchanged.
+
+Omitting `trailingSlash` preserves the existing exact URLPattern behavior. This is useful when your framework already owns trailing slash normalization.
+
+If both Paraglide and your framework normalize trailing slashes, configure them with the same policy to avoid redirect loops.
