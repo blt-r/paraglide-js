@@ -160,6 +160,35 @@ test("adds trailing slashes when configured", async () => {
 	);
 });
 
+test("does not include a canonical trailing slash in wildcard captures", async () => {
+	const runtime = await createParaglide({
+		blob: await newProject({
+			settings: {
+				baseLocale: "en",
+				locales: ["en", "de"],
+			},
+		}),
+		strategy: ["url"],
+		trailingSlash: "always",
+		urlPatterns: [
+			{
+				pattern: "/:path(.*)",
+				localized: [
+					["de", "/de/:path(.*)/details"],
+					["en", "/:path(.*)"],
+				],
+			},
+		],
+	});
+
+	expect(
+		runtime.localizeUrl("https://example.com/foo", { locale: "de" }).href
+	).toBe("https://example.com/de/foo/details/");
+	expect(runtime.deLocalizeUrl("https://example.com/de/foo/details").href).toBe(
+		"https://example.com/foo/"
+	);
+});
+
 test("keeps unmatched custom URLs unchanged", async () => {
 	const runtime = await createParaglide({
 		blob: await newProject({
