@@ -111,6 +111,13 @@ compile({
 	strategy: ["url", "cookie"],
 	urlPatterns: [
 		{
+			pattern: "/",
+			localized: [
+				["de", "/de"],
+				["en", "/"],
+			],
+		},
+		{
 			pattern: "/:path(.*)?",
 			localized: [
 				["de", "/de/:path(.*)?"],
@@ -122,7 +129,11 @@ compile({
 });
 ```
 
-**Why the wildcard pattern always resolves**: The pattern `/:path(.*)?` matches **any** path. When a user visits `/about` (without a locale prefix), it matches the English pattern and resolves to `en`. This is also the default behavior if you don't specify `urlPatterns` at all.
+The exact root rule generates `/de` and `/de#section` instead of `/de/` and
+`/de/#section`. It must appear before the wildcard because the first matching
+pattern wins.
+
+**Why the wildcard pattern always resolves**: The pattern `/:path(.*)?` matches **any path not already handled by the exact root rule**. When a user visits `/about` (without a locale prefix), it matches the English pattern and resolves to `en`. Paraglide's built-in default routing also uses a wildcard when you don't specify `urlPatterns`.
 
 > [!NOTE]
 > `extractLocaleFromUrl()` is case-insensitive only for Paraglide's built-in default routing mode, where the locale is read from the first path segment and canonicalized (so `/DE/about` resolves to `de`). Once you provide custom `urlPatterns`, matching follows normal `URLPattern` semantics instead, so path casing must match your configured patterns exactly.
@@ -155,7 +166,9 @@ compile({
 });
 ```
 
-The dedicated root pattern prevents redirect loops on the homepage.
+The dedicated root pattern generates `/en` and `/fr` instead of `/en/` and
+`/fr/`. It also prevents redirect loops and unnecessary navigation to a
+non-canonical homepage URL.
 
 ### Routes without locale prefix
 
@@ -629,5 +642,13 @@ paraglideVitePlugin({
 `"never"` removes trailing slashes and `"always"` adds them. The root path `/` always remains `/`, while query parameters and hashes are preserved. Existing custom `urlPatterns` can keep their trailing slash style; Paraglide treats the other terminal-slash form as an alias when this option is set. Unmatched custom patterns remain unchanged.
 
 Omitting `trailingSlash` preserves the existing exact URLPattern behavior. This is useful when your framework already owns trailing slash normalization.
+
+Framework normalization does not change URLs produced by `localizeHref()` or
+`localizeUrl()`. If you omit `trailingSlash` and Paraglide generates `/de/`
+while your framework considers `/de` canonical, following `/de/#section` can
+cause an unnecessary navigation or redirect instead of a fragment-only update.
+Use an exact root pattern before the wildcard, as shown in
+[Locale prefixing](#locale-prefixing), or configure `trailingSlash` to match the
+framework's canonical URL policy.
 
 If both Paraglide and your framework normalize trailing slashes, configure them with the same policy to avoid redirect loops.
