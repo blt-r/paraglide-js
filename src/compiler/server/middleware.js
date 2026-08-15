@@ -111,7 +111,10 @@ export async function paraglideMiddleware(request, resolve, options) {
 	}
 
 	const strategy = runtime.getStrategyForUrl(url.href);
-	const decision = await runtime.shouldRedirect({ request, effectiveRequestUrl: url });
+	const decision = await runtime.shouldRedirect({
+		request,
+		effectiveRequestUrl: url,
+	});
 	const locale = decision.locale;
 
 	// if the client makes a request to a URL that doesn't match
@@ -220,7 +223,10 @@ function resolveMiddlewareUrl(request, effectiveRequestUrl) {
 		return new URL(effectiveRequestUrl(request), request.url);
 	}
 
-	if (typeof effectiveRequestUrl === "string" || effectiveRequestUrl instanceof URL) {
+	if (
+		typeof effectiveRequestUrl === "string" ||
+		effectiveRequestUrl instanceof URL
+	) {
 		return new URL(effectiveRequestUrl, request.url);
 	}
 
