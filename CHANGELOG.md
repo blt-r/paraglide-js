@@ -1,5 +1,22 @@
 # @inlang/paraglide-js
 
+## 2.24.0
+
+### Minor Changes
+
+- 7028c8a: Upgrade to `@inlang/sdk` v3 and remove obsolete local account migration code.
+
+### Patch Changes
+
+- 0ac907e: Cache compiled URL patterns to speed up repeated localized-link generation.
+- fda90d2: Skip unchanged Vite compilations across dev-server restarts by persisting and validating the compiler input cache.
+- 84e2766: Add a fast path for common locale-prefix and static-domain URL patterns while preserving the generic URLPattern fallback.
+- 5de9441: Improve compiler output writes by using Node's synchronous SHA-256 implementation and only creating directories for generated files that changed.
+- 5c17acf: Allow importing the programmatic compiler API without installing the optional Vite peer dependency.
+- c52b523: Preserve request bodies in `paraglideMiddleware` by cloning body-bearing requests before rewrapping them, preventing "Body has already been read" errors on POST/PUT/PATCH/DELETE.
+- 32d285b: Avoid rewriting unchanged output files during one-shot CLI compilation.
+- 9e1ee2e: Add an opt-in `trailingSlash` compiler option for canonicalizing localized URLs.
+
 ## 2.23.2
 
 ### Patch Changes
