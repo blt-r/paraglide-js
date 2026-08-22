@@ -2,21 +2,37 @@ import { Command, InvalidArgumentError } from "commander";
 import fs from "node:fs";
 import { resolve, relative } from "node:path";
 import { Logger } from "../../../services/logger/index.js";
-import { DEFAULT_OUTDIR, DEFAULT_PROJECT_PATH } from "../../defaults.js";
-import { compile, type CompilationResult } from "../../../compiler/compile.js";
-import { seedPreviousCompilationFromOutdir } from "../../../compiler/seed-previous-compilation.js";
 import {
-	defaultCompilerOptions,
-	type CompilerOptions,
-} from "../../../compiler/compiler-options.js";
+	DEFAULT_OUTDIR,
+	DEFAULT_PROJECT_PATH,
+} from "../../../services/config/defaults.js";
+import { compile, type CompilationResult } from "../../../compiler/compile.js";
+import { defaultCompilerOptions } from "../../../compiler/compiler-options.js";
+import { seedPreviousCompilationFromOutdir } from "../../../compiler/seed-previous-compilation.js";
 import {
 	createTrackedFs,
 	getWatchTargets,
 } from "../../../services/file-watching/tracked-fs.js";
+import * as v from "valibot";
+import {
+	clearParaglideConfigCache,
+	isConfigFileName,
+	loadParaglideConfig,
+	resolveCompilerOptions,
+	resolveConfigCandidate,
+	strategyNameSchema,
+	type LoadedParaglideConfig,
+	type ParaglideConfig,
+} from "../../../services/config/index.js";
+import { nodeNormalizePath } from "../../../utilities/node-normalize-path.js";
+import type { CompilerOptions } from "../../../compiler/compiler-options.js";
 
-const parseOutputStructure = (
-	value: string
-): NonNullable<CompilerOptions["outputStructure"]> => {
+type OutputStructure = NonNullable<CompilerOptions["outputStructure"]>;
+
+const errorMessage = (error: unknown): string =>
+	error instanceof Error ? error.message : String(error);
+
+const parseOutputStructure = (value: string): OutputStructure => {
 	if (value === "message-modules" || value === "locale-modules") {
 		return value;
 	}
@@ -28,15 +44,13 @@ const parseOutputStructure = (
 export const compileCommand = new Command()
 	.name("compile")
 	.summary("Compiles inlang Paraglide-JS")
-	.requiredOption(
+	.option(
 		"--project <path>",
-		'The path to the inlang project. Example: "./project.inlang"',
-		DEFAULT_PROJECT_PATH
+		`The path to the inlang project. Example: "./project.inlang". Defaults to "${DEFAULT_PROJECT_PATH}".`
 	)
-	.requiredOption(
+	.option(
 		"--outdir <path>",
-		'The path to the output directory. Example: "./src/paraglide"',
-		DEFAULT_OUTDIR
+		`The path to the output directory. Example: "./src/paraglide". Defaults to "${DEFAULT_OUTDIR}".`
 	)
 	.option(
 		"--strategy <items...>",
@@ -50,8 +64,7 @@ export const compileCommand = new Command()
 	.requiredOption("--silent", "Only log errors to the console", false)
 	.option(
 		"--emit-ts-declarations",
-		"Emit .d.ts files for the generated output (requires the typescript package)",
-		defaultCompilerOptions.emitTsDeclarations
+		`Emit .d.ts files for the generated output (requires the typescript package) (default: ${defaultCompilerOptions.emitTsDeclarations})`
 	)
 	.option(
 		"--no-emit-ts-declarations",
@@ -59,8 +72,7 @@ export const compileCommand = new Command()
 	)
 	.option(
 		"--emit-git-ignore",
-		"Emit a .gitignore in the output directory",
-		defaultCompilerOptions.emitGitIgnore
+		`Emit a .gitignore in the output directory (default: ${defaultCompilerOptions.emitGitIgnore})`
 	)
 	.option(
 		"--no-emit-git-ignore",
@@ -68,8 +80,7 @@ export const compileCommand = new Command()
 	)
 	.option(
 		"--emit-prettier-ignore",
-		"Emit a .prettierignore in the output directory",
-		defaultCompilerOptions.emitPrettierIgnore
+		`Emit a .prettierignore in the output directory (default: ${defaultCompilerOptions.emitPrettierIgnore})`
 	)
 	.option(
 		"--no-emit-prettier-ignore",
@@ -77,68 +88,95 @@ export const compileCommand = new Command()
 	)
 	.option(
 		"--emit-readme",
-		"Emit a README.md in the output directory (helps LLMs understand the generated code)",
-		defaultCompilerOptions.emitReadme
+		`Emit a README.md in the output directory (helps LLMs understand the generated code) (default: ${defaultCompilerOptions.emitReadme})`
 	)
-	.option(
-		"--no-emit-readme",
-		"Do not emit README.md in the output directory"
-	)
+	.option("--no-emit-readme", "Do not emit README.md in the output directory")
 	.option(
 		"--is-server <expression>",
 		[
 			"JavaScript expression for runtime `isServer` (enables server/client tree-shaking).",
-			'Quote if the expression contains spaces, e.g. --is-server \'typeof window === "undefined"\'.',
+			"Quote if the expression contains spaces, e.g. --is-server 'typeof window === \"undefined\"'.",
 			"Vite SSR example: --is-server 'import.meta.env.SSR'",
 		].join(" ")
 	)
 	.option(
 		"--output-structure <structure>",
 		[
-			'The output structure for compiled messages. Either "message-modules" or "locale-modules".',
+			`The output structure for compiled messages. Either "message-modules" or "locale-modules" (default: "${defaultCompilerOptions.outputStructure}").`,
 			"",
 			'"message-modules" gives each message its own module (better tree-shaking).',
 			'"locale-modules" bundles messages per locale (fewer files, better for large projects in dev).',
 		].join("\n"),
-		parseOutputStructure,
-		defaultCompilerOptions.outputStructure
+		parseOutputStructure
 	)
 	.option("--watch", "Watch project files and recompile on change", false)
 	.action(
 		async (options: {
 			silent: boolean;
-			project: string;
-			outdir: string;
-			strategy?: CompilerOptions["strategy"];
-			emitTsDeclarations?: CompilerOptions["emitTsDeclarations"];
-			emitGitIgnore?: CompilerOptions["emitGitIgnore"];
-			emitPrettierIgnore?: CompilerOptions["emitPrettierIgnore"];
-			emitReadme?: CompilerOptions["emitReadme"];
-			isServer?: CompilerOptions["isServer"];
-			outputStructure?: CompilerOptions["outputStructure"];
+			project?: string;
+			outdir?: string;
+			strategy?: string[];
+			emitTsDeclarations?: boolean;
+			emitGitIgnore?: boolean;
+			emitPrettierIgnore?: boolean;
+			emitReadme?: boolean;
+			isServer?: string;
+			outputStructure?: OutputStructure;
 			watch?: boolean;
 		}) => {
 			const logger = new Logger({ silent: options.silent, prefix: true });
-			const path = resolve(process.cwd(), options.project);
 
-			const compileOptions = {
-				project: path,
-				outdir: options.outdir,
-				strategy: options.strategy ?? defaultCompilerOptions.strategy,
-				emitTsDeclarations:
-					options.emitTsDeclarations ??
-					defaultCompilerOptions.emitTsDeclarations,
-				emitGitIgnore:
-					options.emitGitIgnore ?? defaultCompilerOptions.emitGitIgnore,
-				emitPrettierIgnore:
-					options.emitPrettierIgnore ??
-					defaultCompilerOptions.emitPrettierIgnore,
-				emitReadme: options.emitReadme ?? defaultCompilerOptions.emitReadme,
-				isServer: options.isServer ?? defaultCompilerOptions.isServer,
-				outputStructure:
-					options.outputStructure ??
-					defaultCompilerOptions.outputStructure,
+			const projectDir = nodeNormalizePath(
+				resolve(process.cwd(), options.project ?? DEFAULT_PROJECT_PATH)
+			);
+
+			const loadConfig = () => loadParaglideConfig({ projectDir, logger });
+
+			const buildCompileOptions = () => {
+				let validatedStrategy: ParaglideConfig["strategy"] | undefined;
+				if (options.strategy !== undefined) {
+					const parsed = v.safeParse(
+						v.array(strategyNameSchema),
+						options.strategy
+					);
+					if (!parsed.success) {
+						const details = parsed.issues
+							.map((i) => `"${v.getDotPath(i) ?? "(root)"}": ${i.message}`)
+							.join(", ");
+						throw new Error(`Invalid --strategy: ${details}`);
+					}
+					validatedStrategy = parsed.output;
+				}
+				return resolveCompilerOptions({
+					config: loadedConfig?.config,
+					overrides: {
+						project: options.project,
+						outdir: options.outdir,
+						strategy: validatedStrategy,
+						emitTsDeclarations: options.emitTsDeclarations,
+						emitGitIgnore: options.emitGitIgnore,
+						emitPrettierIgnore: options.emitPrettierIgnore,
+						emitReadme: options.emitReadme,
+						isServer: options.isServer,
+						// The CLI always uses message-modules unless told otherwise
+						// (plugins apply their own development default).
+						outputStructure:
+							options.outputStructure ?? defaultCompilerOptions.outputStructure,
+					},
+					root: process.cwd(),
+				});
 			};
+
+			let loadedConfig: LoadedParaglideConfig | undefined;
+			let compileOptions: CompilerOptions;
+
+			try {
+				loadedConfig = await loadConfig();
+				compileOptions = buildCompileOptions();
+			} catch (error) {
+				logger.error(errorMessage(error));
+				process.exit(1);
+			}
 
 			if (!options.watch) {
 				logger.info(`Compiling inlang project ...`);
@@ -171,13 +209,50 @@ export const compileCommand = new Command()
 			let compileTimer: NodeJS.Timeout | undefined;
 			let compileInProgress = false;
 			let compileRequested = false;
+			// Set by the project-directory watcher when a config-named file
+			// changes — survives debounced coalescing with unrelated events.
+			let configChangedSinceLastBuild = false;
+
+			/**
+			 * Reacts to a config-named event in the project directory:
+			 * rescans the candidate winner and reloads. A missing config
+			 * falls back to the built-in defaults; an invalid one fails the
+			 * reload (caller skips the compilation).
+			 */
+			const refreshConfig = async (): Promise<boolean> => {
+				const winner = await resolveConfigCandidate(projectDir);
+				if (winner === undefined) {
+					if (loadedConfig !== undefined) {
+						logger.warn(
+							"Paraglide config file was removed — compiling with default options."
+						);
+					}
+					loadedConfig = undefined;
+					compileOptions = buildCompileOptions();
+					return true;
+				}
+				try {
+					clearParaglideConfigCache({ projectDir });
+					const nextLoadedConfig = await loadConfig();
+					if (nextLoadedConfig === undefined) return true; // raced deletion
+					loadedConfig = nextLoadedConfig;
+					compileOptions = buildCompileOptions();
+					return true;
+				} catch (error) {
+					logger.error(errorMessage(error));
+					logger.error(
+						"Skipping compilation because of the invalid paraglide config."
+					);
+					return false;
+				}
+			};
 
 			const updateWatchers = (files: Set<string>) => {
 				const {
 					files: nextFiles,
 					directories: nextDirectories,
 					isIgnoredPath,
-				} = getWatchTargets(files, { outdir: options.outdir });
+				} = getWatchTargets(files, { outdir: compileOptions.outdir });
 
 				for (const [filePath, watcher] of fileWatchers) {
 					if (!nextFiles.has(filePath)) {
@@ -185,6 +260,11 @@ export const compileCommand = new Command()
 						fileWatchers.delete(filePath);
 					}
 				}
+
+				// The project directory is always watched: it hosts the config
+				// file, and its other contents (settings.json, messages/) are
+				// compile inputs anyway.
+				nextDirectories.add(projectDir);
 
 				for (const [directoryPath, watcher] of directoryWatchers) {
 					if (!nextDirectories.has(directoryPath)) {
@@ -200,7 +280,7 @@ export const compileCommand = new Command()
 				) => {
 					watcher.on("error", (error) => {
 						logger.warn(
-							`Watch ${targetType} error for ${targetPath}: ${(error as Error).message}`
+							`Watch ${targetType} error for ${targetPath}: ${errorMessage(error)}`
 						);
 					});
 				};
@@ -216,7 +296,7 @@ export const compileCommand = new Command()
 						});
 						attachWatcherErrorHandler(watcher, filePath, "file");
 						fileWatchers.set(filePath, watcher);
-					} catch (error) {
+					} catch {
 						logger.warn(`Failed to watch file: ${filePath}`);
 					}
 				}
@@ -228,7 +308,12 @@ export const compileCommand = new Command()
 
 					try {
 						const watcher = fs.watch(directoryPath, (eventType, filename) => {
+							const isProjectDir = directoryPath === projectDir;
+
 							if (!filename) {
+								if (isProjectDir) {
+									configChangedSinceLastBuild = true;
+								}
 								scheduleCompile(directoryPath);
 								return;
 							}
@@ -237,11 +322,19 @@ export const compileCommand = new Command()
 							if (isIgnoredPath(changedPath)) {
 								return;
 							}
+							// The project directory hosts the config file: only
+							// config-named events may trigger a rebuild there, and
+							// they must not be lost to debounce coalescing with
+							// unrelated files.
+							if (isProjectDir) {
+								if (!isConfigFileName(changedPath)) return;
+								configChangedSinceLastBuild = true;
+							}
 							scheduleCompile(changedPath);
 						});
 						attachWatcherErrorHandler(watcher, directoryPath, "directory");
 						directoryWatchers.set(directoryPath, watcher);
-					} catch (error) {
+					} catch {
 						logger.warn(`Failed to watch directory: ${directoryPath}`);
 					}
 				}
@@ -256,6 +349,22 @@ export const compileCommand = new Command()
 				compileInProgress = true;
 				const previouslyReadFiles = new Set(readFiles);
 				clearReadFiles();
+
+				if (configChangedSinceLastBuild) {
+					configChangedSinceLastBuild = false;
+					const succeeded = await refreshConfig();
+					if (!succeeded) {
+						// Invalid config: skip this compilation entirely — the
+						// previously compiled output stays on disk untouched.
+						compileInProgress = false;
+						updateWatchers(new Set(readFiles));
+						if (compileRequested) {
+							compileRequested = false;
+							runCompile();
+						}
+						return;
+					}
+				}
 
 				if (changedPath) {
 					logger.info(
@@ -295,7 +404,7 @@ export const compileCommand = new Command()
 					logger.error("Error while compiling inlang project.");
 					logger.error(e);
 				} finally {
-					updateWatchers(readFiles);
+					updateWatchers(new Set(readFiles));
 					compileInProgress = false;
 					if (compileRequested) {
 						compileRequested = false;
