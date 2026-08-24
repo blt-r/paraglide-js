@@ -27,6 +27,14 @@ export function createPerLocaleBuildPlugins(args: {
 		{
 			name: "paraglide-config-discovery-root",
 			enforce: "pre",
+			// The locale-environment plugin loads settings from its own
+			// `config` hook, which runs BEFORE any `configResolved`. Capture
+			// an explicitly configured root here so it is available in time;
+			// `configResolved` still overwrites it with Vite's final value
+			// (covering roots supplied via CLI flags).
+			config(config) {
+				if (config.root !== undefined) discoveryRoot = config.root;
+			},
 			configResolved(config) {
 				discoveryRoot = config.root;
 			},
