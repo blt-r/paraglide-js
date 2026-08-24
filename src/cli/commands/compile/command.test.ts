@@ -267,6 +267,35 @@ describe("config file integration", () => {
 	});
 
 	// Renaming the config between formats switches to the new winner.
+	// A NEW non-config file appearing directly in the project directory (e.g.
+	// a locale JSON for a freshly added locale) must schedule a rebuild even
+	// though no per-file watcher exists for it yet.
+	test("watch recompiles when a new input appears in the project directory", async () => {
+		const { workspace, projectDir } = await createWorkspace();
+		await writeConfig(projectDir, path.join(workspace, "from-config"));
+
+		const compileMock = vi.fn().mockResolvedValue({});
+		vi.doMock("../../../compiler/compile.js", () => ({
+			compile: compileMock,
+		}));
+
+		const { compileCommand } = await import("./command.js");
+
+		await compileCommand.parseAsync(
+			["--project", projectDir, "--watch", "--silent"],
+			{ from: "user" }
+		);
+		expect(compileMock).toHaveBeenCalledTimes(1);
+
+		await writeFile(path.join(projectDir, "es.json"), "{}");
+
+		const deadline = Date.now() + 10_000;
+		while (compileMock.mock.calls.length < 2 && Date.now() < deadline) {
+			await new Promise((r) => setTimeout(r, 50));
+		}
+		expect(compileMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+	});
+
 	test("watch follows config renames between formats", async () => {
 		const { workspace, projectDir } = await createWorkspace();
 		const tsPath = path.join(projectDir, "paraglide.config.ts");
@@ -309,9 +338,9 @@ describe("config file integration", () => {
 		);
 	});
 
-	// Changes next to the config that are not config files must neither
-	// recompile nor reload.
-	test("watch ignores changes to non-config files in the project directory", async () => {
+	// Non-config changes inside the project directory DO rebuild (new
+	// inputs can appear there) but must NOT reload the config.
+	test("watch recompiles without reloading config for non-config changes", async () => {
 		const { workspace, projectDir } = await createWorkspace();
 		await writeConfig(projectDir, path.join(workspace, "from-config"));
 
@@ -348,13 +377,12 @@ describe("config file integration", () => {
 			expect(compileModule.compile).toHaveBeenCalledTimes(1);
 			expect(loadCount).toBe(1);
 
-			// Unrelated files inside the project directory.
 			await writeFile(path.join(projectDir, "README.md"), "hello");
 			await new Promise((r) => setTimeout(r, 1_000));
 			await writeFile(path.join(projectDir, "notes.txt"), "world");
 			await new Promise((r) => setTimeout(r, 1_500));
 
-			expect(compileModule.compile).toHaveBeenCalledTimes(1);
+			expect(compileModule.compile.mock.calls.length).toBeGreaterThanOrEqual(3);
 			expect(loadCount).toBe(1);
 		} finally {
 			vi.doUnmock("../../../services/config/index.js");

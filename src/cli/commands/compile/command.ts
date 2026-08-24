@@ -322,12 +322,12 @@ export const compileCommand = new Command()
 							if (isIgnoredPath(changedPath)) {
 								return;
 							}
-							// The project directory hosts the config file: only
-							// config-named events may trigger a rebuild there, and
-							// they must not be lost to debounce coalescing with
-							// unrelated files.
-							if (isProjectDir) {
-								if (!isConfigFileName(changedPath)) return;
+							// Config-named events must not be lost to debounce
+							// coalescing with unrelated files. Ordinary files are
+							// still scheduled: new inputs can appear directly in
+							// the project directory (e.g. a locale file matching
+							// ./messages/{locale}.json patterns rooted there).
+							if (isProjectDir && isConfigFileName(changedPath)) {
 								configChangedSinceLastBuild = true;
 							}
 							scheduleCompile(changedPath);
