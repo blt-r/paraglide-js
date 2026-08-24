@@ -83,6 +83,58 @@ test("compile seeds existing outdir and disables cleaning (#743)", async () => {
 	expect(exitMock).toHaveBeenCalledWith(0);
 });
 
+test("compile exposes and forwards compiler options missing from the CLI (#757)", async () => {
+	const testDirectory = await mkdtemp(path.join(tmpdir(), "paraglide-cli-"));
+	testDirectories.push(testDirectory);
+	const outdir = path.join(testDirectory, "output");
+	await nodeFs.mkdir(outdir, { recursive: true });
+	await nodeFs.writeFile(path.join(outdir, "custom.txt"), "keep me");
+
+	const compileMock = vi.fn().mockResolvedValue({ outputHashes: {} });
+	vi.doMock("../../../compiler/compile.js", () => ({
+		compile: compileMock,
+	}));
+	const exitError = new Error("process.exit");
+	vi.spyOn(process, "exit").mockImplementation(() => {
+		throw exitError;
+	});
+
+	const { compileCommand } = await import("./command.js");
+	const help = compileCommand.helpInformation();
+
+	expect(help).toContain("--clean-outdir");
+	expect(help).toContain("--no-clean-outdir");
+	expect(help).toContain("--experimental-static-locale <expression>");
+	expect(help).toContain("--disable-async-local-storage");
+
+	await expect(
+		compileCommand.parseAsync(
+			[
+				"--project",
+				path.join(testDirectory, "project.inlang"),
+				"--outdir",
+				outdir,
+				"--no-clean-outdir",
+				"--experimental-static-locale",
+				'import.meta.env.PARAGLIDE_LOCALE ?? "en"',
+				"--disable-async-local-storage",
+				"--silent",
+			],
+			{ from: "user" }
+		)
+	).rejects.toBe(exitError);
+
+	expect(compileMock).toHaveBeenCalledTimes(1);
+	expect(compileMock).toHaveBeenCalledWith(
+		expect.objectContaining({
+			cleanOutdir: false,
+			disableAsyncLocalStorage: true,
+			experimentalStaticLocale: 'import.meta.env.PARAGLIDE_LOCALE ?? "en"',
+			previousCompilation: undefined,
+		})
+	);
+});
+
 test("compile --watch seeds existing outdir and disables cleaning on first compile (#688)", async () => {
 	const testDirectory = await mkdtemp(path.join(tmpdir(), "paraglide-cli-"));
 	testDirectories.push(testDirectory);
@@ -131,6 +183,45 @@ test("compile --watch seeds existing outdir and disables cleaning on first compi
 					"runtime.js": expect.any(String),
 				},
 			},
+		})
+	);
+});
+
+test("compile --watch forwards the newly exposed compiler options (#757)", async () => {
+	const testDirectory = await mkdtemp(path.join(tmpdir(), "paraglide-cli-"));
+	testDirectories.push(testDirectory);
+	const outdir = path.join(testDirectory, "output");
+
+	const compileMock = vi.fn().mockResolvedValue({ outputHashes: {} });
+	vi.doMock("../../../compiler/compile.js", () => ({
+		compile: compileMock,
+	}));
+
+	const { compileCommand } = await import("./command.js");
+
+	await compileCommand.parseAsync(
+		[
+			"--project",
+			path.join(testDirectory, "project.inlang"),
+			"--outdir",
+			outdir,
+			"--watch",
+			"--no-clean-outdir",
+			"--experimental-static-locale",
+			'"de"',
+			"--disable-async-local-storage",
+			"--silent",
+		],
+		{ from: "user" }
+	);
+
+	expect(compileMock).toHaveBeenCalledTimes(1);
+	expect(compileMock).toHaveBeenCalledWith(
+		expect.objectContaining({
+			cleanOutdir: false,
+			disableAsyncLocalStorage: true,
+			experimentalStaticLocale: '"de"',
+			previousCompilation: undefined,
 		})
 	);
 });
