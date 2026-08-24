@@ -53,9 +53,11 @@ function createPerLocaleCompilerOptions(
 		...compilerOptions,
 		outputStructure: compilerOptions.outputStructure ?? "locale-modules",
 		experimentalStaticLocale: perLocaleBuildStaticLocaleExpression,
-		additionalFiles: {
-			...compilerOptions.additionalFiles,
-		},
+		// Only forward additionalFiles when explicitly supplied — an empty
+		// object would override files provided by paraglide.config.*.
+		...(compilerOptions.additionalFiles !== undefined
+			? { additionalFiles: { ...compilerOptions.additionalFiles } }
+			: {}),
 	};
 }
 
