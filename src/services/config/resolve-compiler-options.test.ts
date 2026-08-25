@@ -2,14 +2,21 @@ import { describe, expect, test } from "vitest";
 import { resolveCompilerOptions } from "./resolve-compiler-options.js";
 
 describe("resolveCompilerOptions", () => {
-	test("falls back to the built-in defaults", () => {
-		const options = resolveCompilerOptions();
-		expect(options.project).toBe("./project.inlang");
+	test("uses the built-in outdir default", () => {
+		const options = resolveCompilerOptions({
+			config: undefined,
+			overrides: { project: "/repo/app/project.inlang" },
+		});
+		expect(options.project).toBe("/repo/app/project.inlang");
 		expect(options.outdir).toBe("./src/paraglide");
 	});
 
-	test("resolves the default paths against the supplied root", () => {
-		const options = resolveCompilerOptions({ root: "/repo/app" });
+	test("resolves relative paths against the supplied root", () => {
+		const options = resolveCompilerOptions({
+			config: undefined,
+			overrides: { project: "project.inlang" },
+			root: "/repo/app",
+		});
 		expect(options.project).toBe("/repo/app/project.inlang");
 		expect(options.outdir).toBe("/repo/app/src/paraglide");
 	});
@@ -17,6 +24,7 @@ describe("resolveCompilerOptions", () => {
 	test("config values override the defaults", () => {
 		const options = resolveCompilerOptions({
 			config: { outdir: "./from-config" },
+			overrides: { project: "/base/project.inlang" },
 			root: "/base",
 		});
 		expect(options.outdir).toBe("/base/from-config");
@@ -25,7 +33,7 @@ describe("resolveCompilerOptions", () => {
 	test("overrides win over config values", () => {
 		const options = resolveCompilerOptions({
 			config: { outdir: "./from-config" },
-			overrides: { outdir: "/from-override" },
+			overrides: { project: "/p", outdir: "/from-override" },
 			root: "/base",
 		});
 		expect(options.outdir).toBe("/from-override");
@@ -33,6 +41,7 @@ describe("resolveCompilerOptions", () => {
 
 	test("explicit relative paths are resolved against the root", () => {
 		const options = resolveCompilerOptions({
+			config: undefined,
 			overrides: { project: "packages/app/project.inlang" },
 			root: "/monorepo",
 		});
@@ -41,15 +50,17 @@ describe("resolveCompilerOptions", () => {
 
 	test("undefined overrides do not shadow config values", () => {
 		const options = resolveCompilerOptions({
-			config: { strategy: ["url"] },
-			overrides: { strategy: undefined },
+			config: { strategy: ["url"], outdir: "/kept" },
+			overrides: { strategy: undefined, project: "/p" },
 		});
 		expect(options.strategy).toEqual(["url"]);
+		expect(options.outdir).toBe("/kept");
 	});
 
 	test("absolute paths from the config survive root resolution", () => {
 		const options = resolveCompilerOptions({
 			config: { outdir: "/abs/out" },
+			overrides: { project: "/p" },
 			root: "/base",
 		});
 		expect(options.outdir).toBe("/abs/out");

@@ -2,8 +2,8 @@ import {
 	defaultCompilerOptions,
 	type CompilerOptions,
 } from "../../compiler/compiler-options.js";
-import { DEFAULT_OUTDIR, DEFAULT_PROJECT_PATH } from "./defaults.js";
 import { resolve } from "node:path";
+import { DEFAULT_OUTDIR } from "./defaults.js";
 import type { ParaglideConfig } from "./config-schema.js";
 
 /**
@@ -18,18 +18,15 @@ import type { ParaglideConfig } from "./config-schema.js";
  * `undefined` values in `config` and `overrides` are ignored, so an absent
  * CLI flag or plugin option never shadows the config file.
  */
-export function resolveCompilerOptions(
-	args: {
-		config?: ParaglideConfig | undefined;
-		/** Directory used to resolve relative paths. */
-		root?: string | undefined;
-		/**
-		 * Explicitly passed values, e.g. command line flags or plugin options.
-		 * Unlike `config`, these may contain internal options such as `fs`.
-		 */
-		overrides?: Partial<CompilerOptions> | undefined;
-	} = {}
-): CompilerOptions {
+
+export function resolveCompilerOptions(args: {
+	config: ParaglideConfig | undefined;
+	/** Directory used to resolve relative paths. */
+	root?: string | undefined;
+	overrides: Partial<Omit<CompilerOptions, "project">> & {
+		project: string;
+	};
+}): CompilerOptions {
 	const clonedDefaults =
 		typeof structuredClone === "function"
 			? structuredClone(defaultsTemplate)
@@ -52,15 +49,15 @@ export function resolveCompilerOptions(
 // per surface — bundler plugins switch to "locale-modules" in development
 // (#486), while the CLI always uses "message-modules". Surfaces that need
 // a pinned value pass it explicitly as an override.
-const defaultsTemplate: Omit<CompilerOptions, "outputStructure"> = {
-	...(() => {
+// `project` has no built-in default either: bundler plugins require it
+// explicitly, and the CLI decides whether to apply (and announce) the
+// conventional path.
+const defaultsTemplate: Omit<CompilerOptions, "outputStructure" | "project"> =
+	(() => {
 		const { outputStructure: _outputStructure, ...rest } =
 			defaultCompilerOptions;
-		return rest;
-	})(),
-	project: DEFAULT_PROJECT_PATH,
-	outdir: DEFAULT_OUTDIR,
-};
+		return { ...rest, outdir: DEFAULT_OUTDIR };
+	})();
 
 function omitUndefinedEntries<T extends object>(object: T): T {
 	return Object.fromEntries(

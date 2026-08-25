@@ -108,26 +108,6 @@ function setViteRoot(plugin: any, root: string): void {
 
 const mockContext = { addWatchFile: () => {} };
 
-// The docs promise that bundler plugins can be called without arguments
-// (all options come from the config file / built-in defaults).
-test("bundler plugins can be instantiated without arguments", async () => {
-	const { paraglideRollupPlugin } =
-		await import("../bundler-plugins/rollup.js");
-	const { paraglideWebpackPlugin } =
-		await import("../bundler-plugins/webpack.js");
-	const { paraglideEsbuildPlugin } =
-		await import("../bundler-plugins/esbuild.js");
-	const { paraglideRolldownPlugin } =
-		await import("../bundler-plugins/rolldown.js");
-
-	expect(() => paraglideRollupPlugin()).not.toThrow();
-	expect(() => paraglideWebpackPlugin()).not.toThrow();
-	expect(() => paraglideEsbuildPlugin()).not.toThrow();
-	expect(() => paraglideRolldownPlugin()).not.toThrow();
-});
-
-// Discovery order is js > mjs > ts > cjs: deleting the active .ts config
-// while a .js config exists must flip compilation to the .js file.
 test("watch mode follows config precedence flips", async () => {
 	process.env.NODE_ENV = "development";
 	const { writeFile, rm } = await import("node:fs/promises");
@@ -595,18 +575,19 @@ test("vite plugin reads options from a paraglide config file", async () => {
 	expect(await realFs.promises.readdir(flagOutdir)).not.toHaveLength(0);
 });
 
-// With no explicit project option, the config is discovered inside the
-// conventional ./project.inlang relative to the tool root.
-test("vite plugin discovers the config file from the vite root", async () => {
-	const { workspace, outdir } = await createProjectFixture({
-		outdirName: "discovered-output",
-	});
+// A relative `project` option is resolved against the tool root.
+test("resolves a relative project option against the vite root", async () => {
+	const { workspace, projectDir, outdir } = await createProjectFixture();
 
 	const { paraglideVitePlugin: vitePlugin } =
 		await import("../bundler-plugins/vite.js");
-	const plugin = vitePlugin() as any;
+	const plugin = vitePlugin({
+		project: "./project.inlang", // relative — resolved against the root
+		outdir,
+	}) as any;
 	setViteRoot(plugin, workspace);
 
+	expect(projectDir).toBe(path.join(workspace, "project.inlang"));
 	await plugin.buildStart?.call(mockContext);
 	expect(await realFs.promises.readdir(outdir)).not.toHaveLength(0);
 });

@@ -8,7 +8,6 @@ import { createViteLocaleEnvironmentPlugin } from "./vite-environments.js";
 import {
 	loadParaglideConfig,
 	resolveCompilerOptions,
-	DEFAULT_PROJECT_PATH,
 	type ParaglideConfig,
 } from "../../services/config/index.js";
 import type { ParaglidePluginOptions } from "../unplugin.js";
@@ -103,7 +102,7 @@ async function loadSettings(
 ): Promise<PerLocaleBuildSettings> {
 	const root = discoveryRoot ?? process.cwd();
 	const loaded = await loadParaglideConfig({
-		projectDir: resolve(root, options.project ?? DEFAULT_PROJECT_PATH),
+		projectDir: resolve(root, options.project),
 	});
 	validateExplicitCompilerOptions(options, loaded?.config);
 	const { project } = resolveCompilerOptions({

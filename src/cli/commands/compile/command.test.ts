@@ -1,6 +1,7 @@
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import * as nodeFs from "node:fs/promises";
 import { tmpdir } from "node:os";
+import consola from "consola";
 import path, { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -165,6 +166,48 @@ describe("config file integration", () => {
 					outdir,
 				})
 			);
+		} finally {
+			cwdMock.mockRestore();
+		}
+	});
+
+	test("announces the conventional project default when --project is omitted", async () => {
+		const { workspace, projectDir } = await createWorkspace();
+		const outdir = path.join(workspace, "from-config");
+		await writeConfig(projectDir, outdir);
+
+		const compileMock = vi.fn().mockResolvedValue({});
+		vi.doMock("../../../compiler/compile.js", () => ({
+			compile: compileMock,
+		}));
+		const exitError = new Error("process.exit");
+		vi.spyOn(process, "exit").mockImplementation(() => {
+			throw exitError;
+		});
+		const infoSpy = vi.spyOn(consola, "info").mockImplementation(() => {});
+
+		const { compileCommand } = await import("./command.js");
+		const cwdMock = vi.spyOn(process, "cwd").mockReturnValue(workspace);
+
+		try {
+			await expect(
+				compileCommand.parseAsync(
+					["--outdir", outdir], // no --project, no --silent
+					{ from: "user" }
+				)
+			).rejects.toBe(exitError);
+
+			expect(compileMock).toHaveBeenCalledWith(
+				expect.objectContaining({
+					project: projectDir,
+					outdir,
+				})
+			);
+			expect(
+				infoSpy.mock.calls.some((call) =>
+					String(call[0]).includes("--project was not provided")
+				)
+			).toBe(true);
 		} finally {
 			cwdMock.mockRestore();
 		}

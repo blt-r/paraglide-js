@@ -132,6 +132,14 @@ export const compileCommand = new Command()
 
 			const loadConfig = () => loadParaglideConfig({ projectDir, logger });
 
+			let projectOverride = options.project;
+			if (projectOverride === undefined) {
+				projectOverride = DEFAULT_PROJECT_PATH;
+				logger.info(
+					`--project was not provided, using "${DEFAULT_PROJECT_PATH}".`
+				);
+			}
+
 			const buildCompileOptions = () => {
 				let validatedStrategy: ParaglideConfig["strategy"] | undefined;
 				if (options.strategy !== undefined) {
@@ -150,7 +158,7 @@ export const compileCommand = new Command()
 				return resolveCompilerOptions({
 					config: loadedConfig?.config,
 					overrides: {
-						project: options.project,
+						project: projectOverride,
 						outdir: options.outdir,
 						strategy: validatedStrategy,
 						emitTsDeclarations: options.emitTsDeclarations,
@@ -224,7 +232,7 @@ export const compileCommand = new Command()
 				if (winner === undefined) {
 					if (loadedConfig !== undefined) {
 						logger.warn(
-							"Paraglide config file was removed — compiling with default options."
+							"Paraglide config file was removed, compiling with default options."
 						);
 					}
 					loadedConfig = undefined;

@@ -60,7 +60,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
-+    paraglideVitePlugin(),
++    paraglideVitePlugin({ project: "./project.inlang" }),
   ],
 });
 ```

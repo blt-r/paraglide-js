@@ -21,13 +21,16 @@ in this order:
 3. `paraglide.config.ts`
 4. `paraglide.config.cjs`
 
-The project directory itself is resolved from:
+The project directory itself comes from:
 
-- the CLI: the `--project` flag, defaulting to `./project.inlang` relative to
-  the current working directory
-- bundler plugins: the `project` option, defaulting to `./project.inlang`
-  relative to the tool's project root (Vite's `root`, webpack/rspack's
-  `context`, otherwise the current working directory)
+- the CLI: the `--project` flag. When omitted, Paraglide uses the
+  conventional `./project.inlang` relative to the current working directory
+  and logs a notice saying so.
+- bundler plugins: the required `project` option — for example
+  `paraglideVitePlugin({ project: "./project.inlang" })`. Relative paths
+  are resolved against the tool's project root (Vite's `root`,
+  webpack/rspack's `context`, otherwise the current working directory).
+  There is no implicit default: point the plugin at your project.
 
 If no config file exists inside the project directory, everything keeps
 working via command line flags, plugin options, and built-in defaults.
@@ -119,8 +122,8 @@ npx @inlang/paraglide-js compile --project ./packages/app/project.inlang
 
 ## Usage with bundler plugins
 
-All bundler plugins accept fully optional options — they can even be called
-without arguments:
+All other options are optional — anything you don't pass is read from the
+config file:
 
 ```ts
 // vite.config.ts
@@ -128,8 +131,8 @@ import { paraglideVitePlugin } from "@inlang/paraglide-js";
 
 export default {
 	plugins: [
-		// reads everything from <root>/project.inlang/paraglide.config.*
-		paraglideVitePlugin(),
+		// project is required; everything else comes from its config file
+		paraglideVitePlugin({ project: "./project.inlang" }),
 	],
 };
 ```

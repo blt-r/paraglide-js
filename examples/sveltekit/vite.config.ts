@@ -5,6 +5,6 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 export default defineConfig({
 	plugins: [
 		sveltekit(),
-		paraglideVitePlugin(),
+		paraglideVitePlugin({ project: './project.inlang' }),
 	]
 });

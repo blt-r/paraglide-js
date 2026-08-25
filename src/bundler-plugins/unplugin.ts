@@ -20,7 +20,6 @@ import {
 	loadParaglideConfig,
 	resolveCompilerOptions,
 	resolveConfigCandidate,
-	DEFAULT_PROJECT_PATH,
 	type LoadedParaglideConfig,
 } from "../services/config/index.js";
 
@@ -29,23 +28,38 @@ const PLUGIN_NAME = "unplugin-paraglide-js";
 /**
  * The options accepted by the paraglide bundler plugins.
  *
- * Every property is optional: values that are not provided are read from
- * the paraglide config file inside `<project>/paraglide.config.*`, where
- * `project` defaults to `./project.inlang` resolved against the tool's
- * project root (Vite `root`, webpack/rspack `context`, else the process
- * working directory). Anything still missing falls back to the built-in
- * defaults.
+ * `project` is required — the path to your inlang project directory, which
+ * also hosts the paraglide config file (`<project>/paraglide.config.*`).
+ * Relative paths are resolved against the tool's project root (Vite `root`,
+ * webpack/rspack `context`, else the process working directory).
+ *
+ * Every other property is optional: values that are not provided are read
+ * from the config file, and anything still missing falls back to the
+ * built-in defaults.
  *
  * @example
  * ```ts
- * // Zero-config: reads everything from ./project.inlang/paraglide.config.*
- * paraglideVitePlugin()
+ * paraglideVitePlugin({ project: "./project.inlang" })
  *
  * // Explicit options win over the config file
- * paraglideVitePlugin({ outdir: "./src/paraglide-custom" })
+ * paraglideVitePlugin({
+ *   project: "./project.inlang",
+ *   outdir: "./src/paraglide-custom",
+ * })
  * ```
  */
-export type ParaglidePluginOptions = Partial<CompilerOptions>;
+export type ParaglidePluginOptions = Omit<
+	Partial<CompilerOptions>,
+	"project"
+> & {
+	/**
+	 * Required — the path to your inlang project directory, which also
+	 * hosts the paraglide config file (`<project>/paraglide.config.*`).
+	 * Relative paths are resolved against the tool's project root (Vite
+	 * `root`, webpack/rspack `context`, else the process working directory).
+	 */
+	project: string;
+};
 
 const logger = new Logger();
 
@@ -503,14 +517,13 @@ async function runCompilation(args: {
 	}
 }
 
-// The optional parameter keeps zero-argument calls (`paraglideVitePlugin()`)
-// valid through unplugin's inferred backend signatures, while the return
-// type preserves literal option types (`enforce: "pre"`, ...).
+// The return type preserves literal option types (`enforce: "pre"`, ...)
+// while `project` stays required on the input side.
 type UnpluginFactoryWithOptions = (
-	userArgs?: ParaglidePluginOptions
+	userArgs: ParaglidePluginOptions
 ) => ReturnType<UnpluginFactory<ParaglidePluginOptions>>;
 
-export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs = {}) => {
+export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs) => {
 	const state = getPluginState(userArgs);
 	const { readFiles, clearReadFiles } = state;
 	// Project root as reported by the bundler (vite `root`, webpack/rspack
@@ -563,10 +576,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs = {}) => {
 
 	const getProjectDir = () =>
 		nodeNormalizePath(
-			resolve(
-				discoveryRoot ?? process.cwd(),
-				userArgs.project ?? DEFAULT_PROJECT_PATH
-			)
+			resolve(discoveryRoot ?? process.cwd(), userArgs.project)
 		);
 
 	const resolveOptionsWith = (
@@ -593,7 +603,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs = {}) => {
 			if (hadActiveConfig) {
 				hadActiveConfig = false;
 				logger.warn(
-					"Paraglide config file was removed — continuing with default options."
+					"Paraglide config file was removed, continuing with default options."
 				);
 			}
 			return undefined;
@@ -629,7 +639,7 @@ export const unpluginFactory: UnpluginFactoryWithOptions = (userArgs = {}) => {
 			if (!shouldCompile) return;
 		} else {
 			if (configEvent) {
-				logger.info("Paraglide configuration changed — re-compiling.");
+				logger.info("Paraglide configuration changed, re-compiling.");
 				clearParaglideConfigCache({ projectDir });
 			}
 			try {

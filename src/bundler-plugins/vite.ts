@@ -22,7 +22,7 @@ export type ParaglideVitePluginOptions = ParaglidePluginOptions & {
 const createCompilerVitePlugin = createVitePlugin(unpluginFactory);
 
 export function paraglideVitePlugin(
-	options: ParaglideVitePluginOptions = {}
+	options: ParaglideVitePluginOptions
 ): Plugin | Plugin[] {
 	const { experimentalPerLocaleBuild, ...compilerOptions } = options;
 	if (!experimentalPerLocaleBuild) {
