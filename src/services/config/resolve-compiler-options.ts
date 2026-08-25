@@ -27,10 +27,7 @@ export function resolveCompilerOptions(args: {
 		project: string;
 	};
 }): CompilerOptions {
-	const clonedDefaults =
-		typeof structuredClone === "function"
-			? structuredClone(defaultsTemplate)
-			: JSON.parse(JSON.stringify(defaultsTemplate));
+	const clonedDefaults = structuredClone(defaultsTemplate);
 	const options: Partial<CompilerOptions> = {
 		...clonedDefaults,
 		...omitUndefinedEntries(args.config ?? {}),
