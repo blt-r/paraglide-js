@@ -2,18 +2,18 @@ import { describe, expect, test } from "vitest";
 import { resolveCompilerOptions } from "./resolve-compiler-options.js";
 
 describe("resolveCompilerOptions", () => {
-	test("uses the built-in outdir default", () => {
-		const options = resolveCompilerOptions({
-			config: undefined,
-			overrides: { project: "/repo/app/project.inlang" },
-		});
-		expect(options.project).toBe("/repo/app/project.inlang");
-		expect(options.outdir).toBe("./src/paraglide");
+	test("throws when outdir is missing", () => {
+		expect(() =>
+			resolveCompilerOptions({
+				config: undefined,
+				overrides: { project: "/repo/app/project.inlang" },
+			})
+		).toThrow(/outdir.*required/i);
 	});
 
 	test("resolves relative paths against the supplied root", () => {
 		const options = resolveCompilerOptions({
-			config: undefined,
+			config: { outdir: "./src/paraglide" },
 			overrides: { project: "project.inlang" },
 			root: "/repo/app",
 		});
@@ -41,7 +41,7 @@ describe("resolveCompilerOptions", () => {
 
 	test("explicit relative paths are resolved against the root", () => {
 		const options = resolveCompilerOptions({
-			config: undefined,
+			config: { outdir: "./src/paraglide" },
 			overrides: { project: "packages/app/project.inlang" },
 			root: "/monorepo",
 		});

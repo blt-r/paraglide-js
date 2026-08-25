@@ -140,6 +140,7 @@ export const compileCommand = new Command()
 				);
 			}
 
+
 			const buildCompileOptions = () => {
 				let validatedStrategy: ParaglideConfig["strategy"] | undefined;
 				if (options.strategy !== undefined) {
@@ -155,11 +156,18 @@ export const compileCommand = new Command()
 					}
 					validatedStrategy = parsed.output;
 				}
+				let outdirOverride: string | undefined = options.outdir;
+				if (
+					outdirOverride === undefined &&
+					loadedConfig?.config.outdir === undefined
+				) {
+					outdirOverride = DEFAULT_OUTDIR;
+				}
 				return resolveCompilerOptions({
 					config: loadedConfig?.config,
 					overrides: {
 						project: projectOverride,
-						outdir: options.outdir,
+						outdir: outdirOverride,
 						strategy: validatedStrategy,
 						emitTsDeclarations: options.emitTsDeclarations,
 						emitGitIgnore: options.emitGitIgnore,
